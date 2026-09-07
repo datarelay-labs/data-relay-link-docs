@@ -5,7 +5,21 @@ description: "Update FRP Auto Deploy safely while preserving identity, trust, an
 
 # Updates
 
-FRP Auto Deploy separates project updates from upstream FRP binary updates.
+FRP Auto Deploy separates **project updates** from **upstream FRP binary updates**.
+
+## Update decision flow
+
+```mermaid
+flowchart TD
+    A[Need to update?] --> B[Run update project --check]
+    B --> C{Project update available?}
+    C -->|Yes| D[Create backup when change risk warrants it]
+    D --> E[update project]
+    E --> F[show status + doctor + test service]
+    C -->|No| G{Checking upstream FRP?}
+    G -->|Yes| H[show upstream / update frp --check]
+    H --> I[Only pinned/tested FRP is accepted]
+```
 
 ## Project update
 
@@ -21,22 +35,32 @@ Then update:
 sudo frpctl update project
 ```
 
-Normal project updates are designed to preserve:
+A normal supported project update is designed to preserve:
 
-- client identity
-- the project private CA
-- the FRP token
+- CLIENT ID and client management identity
+- project private CA
+- FRP token
 - registry state
 - enrollment state where applicable
+- service definitions
 - persistent public service-port reservations
 
-A normal update does not require client re-enrollment.
+```mermaid
+flowchart LR
+    OLD[Installed project] -->|verified update| NEW[Updated project]
+    STATE[Identity / CA / token / registry / ports] -->|preserved| NEW
+```
+
+A normal update is **not** a re-enrollment operation.
 
 ## Stable release vs development `main`
 
-The current published stable release is **v2.1.2**. The source repository `main` branch currently identifies itself as **2.1.3** and is a development channel until an immutable release tag is published.
+| Channel | Meaning | Recommended use |
+| --- | --- | --- |
+| **v2.1.2 immutable tag** | current published stable | field/normal installation |
+| **main = 2.1.3** | mutable development channel | intentional development/testing only |
 
-Use immutable release tags for field installations unless you intentionally opt into development behavior.
+Do not copy a development-only command into stable field documentation unless the operator explicitly opted into development behavior.
 
 ## FRP binary update
 
@@ -45,8 +69,28 @@ sudo frpctl show upstream
 sudo frpctl update frp --check
 ```
 
-`show upstream` is informational. FRP Auto Deploy does not automatically adopt the newest upstream FRP version. The project remains pinned to the version that has been tested, currently **v0.70.1**.
+`show upstream` is informational. FRP Auto Deploy does **not** automatically install the newest upstream FRP release. The project remains pinned to the version it has tested, currently **v0.70.1**.
+
+```mermaid
+flowchart LR
+    U[Newest upstream FRP] -. informational .-> C[show upstream]
+    P[Pinned/tested FRP 0.70.1] --> A[Allowed normal update path]
+```
 
 ## Same-version refreshes
 
-Update decisions are not based only on the visible project version string. Verified release metadata and bundle SHA256 are used so a changed build can be recognized even when the project version did not change.
+Update decisions are not based only on the visible project version string. Verified release metadata and bundle SHA256 can distinguish changed builds even when the project version text is unchanged.
+
+## After any update
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+Then test at least one representative published service through its public endpoint.
+
+<Warning>
+  Do not manually replace `frps`/`frpc` with an arbitrary newer upstream binary just because `show upstream` reports one. The tested/pinned FRP policy is part of release safety.
+</Warning>

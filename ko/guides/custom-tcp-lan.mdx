@@ -1,0 +1,72 @@
+---
+title: "Custom TCP & LAN Target"
+description: "임의 TCP 서비스와 Client가 접근 가능한 다른 LAN host 서비스를 게시합니다."
+icon: "network-wired"
+---
+
+# Custom TCP & LAN Target
+
+SSH/웹 외에도 Client가 연결할 수 있는 임의 **TCP target**을 게시할 수 있습니다.
+
+## Local TCP 예
+
+```text
+Grafana       127.0.0.1:3000
+API           127.0.0.1:8080
+Custom agent  127.0.0.1:9000
+```
+
+```mermaid
+flowchart LR
+    U[Internet client] -->|assigned public port| S[FRP Server]
+    S --> C[FRP Client]
+    C -->|127.0.0.1:3000| G[Grafana]
+```
+
+## Client를 LAN Gateway로 사용
+
+```mermaid
+flowchart LR
+    U[Internet users]
+    S[FRP Server]
+    C[FRP Client\ngateway host]
+    DB[10.10.30.30:5432\nPostgreSQL]
+    UI[10.10.40.50:8443\nAppliance UI]
+    API[10.10.30.20:8080\nAPI]
+
+    U --> S --> C
+    C --> DB
+    C --> UI
+    C --> API
+```
+
+FRP Client가 `target-host:target-port`로 normal TCP 연결을 할 수 있어야 합니다.
+
+## 게시 전에 먼저 확인
+
+```mermaid
+flowchart TD
+    A[LAN target 게시] --> B{Client에서 target을\n직접 연결 가능?}
+    B -->|아니오| C[Routing/ACL/target firewall/listener 수정]
+    B -->|예| D[FRP service 추가]
+    D --> E[Public port 확인]
+    E --> F[외부 네트워크에서 테스트]
+```
+
+## Service ID
+
+사람이 이해할 수 있는 stable ID를 사용하세요.
+
+```text
+postgres-reporting
+appliance-ui
+branch-api
+```
+
+## 보안
+
+Database나 appliance admin port를 public endpoint로 게시하면 공격 표면이 외부에서 도달 가능해집니다. FRP Auto Deploy는 database account/ACL, app auth, target firewall, network segmentation을 대신 설정하지 않습니다.
+
+<Warning>
+  "포트가 연결된다"와 "서비스가 안전하게 공개되었다"는 같은 의미가 아닙니다. Target application의 자체 authentication/authorization을 유지하세요.
+</Warning>

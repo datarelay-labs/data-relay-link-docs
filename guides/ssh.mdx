@@ -7,17 +7,26 @@ description: "Publish SSH through FRP Auto Deploy and connect using the assigned
 
 SSH is the most common FRP Auto Deploy service.
 
-## Target the client's own SSH service
+## Local SSH on the client
+
+```mermaid
+flowchart LR
+    U[Operator laptop] -->|ssh -p 6000| S[FRP Server]
+    S -->|FRP tunnel| C[Remote Client]
+    C -->|127.0.0.1:22| D[sshd]
+```
 
 Typical target:
 
 ```text
-127.0.0.1:22
+Target host : 127.0.0.1
+Target port : 22
+SSH user    : existing-user
 ```
 
-During enrollment, specify an SSH user that already exists on the client. FRP Auto Deploy does not create the account or manage its password or SSH keys.
+The SSH account and `sshd` must already exist. FRP Auto Deploy does not create users, passwords, keys, `authorized_keys`, or `sshd_config`.
 
-## Connect through the FRP server
+## Connect
 
 After enrollment, the SSH service receives a persistent public port.
 
@@ -25,17 +34,24 @@ After enrollment, the SSH service receives a persistent public port.
 ssh -p <public-port> <ssh-user>@<server-public-IP>
 ```
 
-If a published-service hostname is configured, you can use it instead of the IP:
+With a public service hostname:
 
 ```bash
 ssh -p <public-port> <ssh-user>@fw.example.com
 ```
 
-The public hostname is an access alias. It does not change the client's CLIENT ID or service reservation.
+The hostname is an access alias. It does not change CLIENT ID, Service ID, or the service-port reservation.
 
 ## Publish SSH on another LAN host
 
-The FRP client can also act as a small gateway:
+```mermaid
+flowchart LR
+    U[Operator] -->|public port| S[FRP Server]
+    S --> C[FRP Client]
+    C -->|10.10.20.30:22| H[LAN Server]
+```
+
+Example:
 
 ```text
 Target host : 10.10.20.30
@@ -43,9 +59,28 @@ Target port : 22
 SSH user    : admin
 ```
 
-The FRP client only needs normal network reachability to that LAN target.
+The FRP client must already have normal network reachability to `10.10.20.30:22`.
 
-## Check the service
+## Verify each hop
+
+```mermaid
+flowchart TD
+    A[SSH fails] --> B{Is sshd listening on target?}
+    B -->|No| C[Fix target SSH service]
+    B -->|Yes| D{Can FRP Client reach target:22?}
+    D -->|No| E[Fix LAN routing / firewall / ACL]
+    D -->|Yes| F{Does server show service + public port?}
+    F -->|No| G[Fix service config / apply]
+    F -->|Yes| H{Is public port reachable externally?}
+    H -->|No| I[Fix server firewall / NAT / SG]
+    H -->|Yes| J[Inspect SSH auth / key / account]
+```
+
+On the target/client:
+
+```bash
+ss -lntp | grep ':22'
+```
 
 On the client:
 
@@ -63,4 +98,7 @@ sudo frpctl show client <CLIENT-ID> services
 
 ## Disable vs release
 
-Disabling SSH stops publication but keeps the assigned public port reserved. Re-enabling reuses the same port. Releasing the service returns that port to the pool.
+- **Disable** SSH when you want to stop publication temporarily but keep the public port.
+- **Release** when you intentionally want to return that port to the pool.
+
+See [Lifecycle Semantics](/operations/lifecycle).

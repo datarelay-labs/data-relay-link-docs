@@ -5,7 +5,23 @@ description: "Protect FRP Auto Deploy identity, PKI, registry, and configuration
 
 # Backup & Restore
 
-FRP Auto Deploy keeps important trust and reservation state on the server. Backups protect the information required to preserve existing clients and public service ports.
+The FRP Auto Deploy server contains state that is more important than the software binaries themselves. Backups protect the trust and reservation data needed to keep existing clients working after recovery.
+
+## What you are protecting
+
+```mermaid
+flowchart TB
+    B[Server backup]
+    B --> C[Configuration]
+    B --> P[Project PKI / CA]
+    B --> T[FRP token]
+    B --> R[Client registry]
+    B --> E[Enrollment state where applicable]
+
+    P --> X[Existing client trust]
+    R --> Y[CLIENT IDs + service metadata]
+    R --> Z[Persistent public-port reservations]
+```
 
 ## Create a backup
 
@@ -13,43 +29,76 @@ FRP Auto Deploy keeps important trust and reservation state on the server. Backu
 sudo frpctl create backup
 ```
 
-Important server state includes configuration, the project PKI, the FRP token, registry data, and related enrollment metadata according to the supported backup format.
+Store the resulting backup as sensitive infrastructure material.
 
-## Restore a backup
+## Important persistent state
+
+At minimum, understand these locations:
+
+```text
+/etc/frp-auto-deploy/config.json
+/etc/frp-auto-deploy/pki/
+/etc/frp/server_token
+/var/lib/frp-auto-deploy/registry.json
+```
+
+The supported backup format also handles related state according to the installed release.
+
+## Restore
 
 ```bash
 sudo frpctl restore backup <path>
 ```
 
-Restore is not a blind file copy. The supported restore flow validates the archive, snapshots the current state, restores the saved state, restarts the required services, and runs health checks. It is designed to roll back when restoration cannot be completed consistently.
+Restore is not a blind `cp -r`. The supported flow is designed around validation and rollback behavior.
 
-## Why the PKI matters
-
-Existing clients trust the project private CA. Losing the CA private key can require advanced recovery and trust re-establishment. A normal software reinstall or update does not intentionally rotate that CA.
-
-## Minimum disaster-recovery state
-
-Protect at least:
-
-```text
-/etc/frp-auto-deploy/pki/
-/etc/frp/server_token
-/etc/frp-auto-deploy/config.json
-/var/lib/frp-auto-deploy/registry.json
+```mermaid
+flowchart LR
+    A[Validate archive] --> B[Snapshot current state]
+    B --> C[Restore saved state]
+    C --> D[Restart required services]
+    D --> E[Run health checks / doctor]
+    E -->|success| F[Recovered]
+    E -->|failure| G[Rollback / fail safely]
 ```
 
-Also preserve enrollment/bootstrap state when your recovery policy requires it.
+## Why the CA matters
 
-Store backups securely because they contain sensitive server state.
+Existing clients trust the project's private CA. Losing the CA private key can force advanced trust recovery or re-establishment. A normal reinstall/update should not intentionally rotate that CA.
+
+## When to create a backup
+
+- before high-risk maintenance or migration
+- before a restore test
+- before changing topology if rollback matters
+- on a regular operational schedule appropriate for your environment
+- after meaningful stable changes to client/service inventory when recovery point matters
 
 ## After restore
 
-Verify:
-
 ```bash
+sudo frpctl show version
 sudo frpctl show status
 sudo frpctl show clients
 sudo frpctl doctor
 ```
 
-Then test one or more published services through their expected public ports.
+Then verify one or more representative public service paths.
+
+```mermaid
+flowchart LR
+    U[Internet user] -->|expected public port| S[Restored server]
+    S --> C[Existing client]
+    C --> T[Target service]
+```
+
+## What not to do
+
+- do not treat the PKI directory as disposable configuration
+- do not restore only `frps.toml` and expect identity/port state to follow
+- do not copy registry fragments manually between unrelated servers
+- do not store backups in a public location
+
+<Warning>
+  Backups can contain highly sensitive trust and authentication material. Protect them at least as carefully as the production server state they represent.
+</Warning>

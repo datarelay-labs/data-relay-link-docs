@@ -122,14 +122,18 @@
             "group": "클라이언트 & 서비스",
             "pages": [
               "ko/guides/zero-touch",
-              "ko/guides/services"
+              "ko/guides/services",
+              "ko/guides/ssh",
+              "ko/guides/http-https",
+              "ko/guides/custom-tcp-lan"
             ],
             "icon": "network-wired"
           },
           {
             "group": "frpctl",
             "pages": [
-              "ko/frpctl/overview"
+              "ko/frpctl/overview",
+              "ko/frpctl/cli-reference"
             ],
             "icon": "terminal"
           },
@@ -147,6 +151,7 @@
             "pages": [
               "ko/operations/diagnostics",
               "ko/operations/lifecycle",
+              "ko/operations/updates",
               "ko/operations/troubleshooting"
             ],
             "icon": "screwdriver-wrench"

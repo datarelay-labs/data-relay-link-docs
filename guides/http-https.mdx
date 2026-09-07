@@ -5,54 +5,91 @@ description: "Publish HTTP and HTTPS applications through FRP Auto Deploy using 
 
 # HTTP & HTTPS
 
-FRP Auto Deploy represents HTTP and HTTPS applications as TCP services. It does not act as an application reverse proxy for published services.
+FRP Auto Deploy publishes HTTP and HTTPS as **TCP services**. It is not an application-layer reverse proxy for the published service.
 
-## HTTP
+## HTTP path
 
-Example local target:
+```mermaid
+flowchart LR
+    B[Browser] -->|http://server:6001| S[FRP Server]
+    S --> C[FRP Client]
+    C -->|127.0.0.1:80| W[HTTP App]
+```
+
+Example targets:
 
 ```text
 127.0.0.1:80
-```
-
-Example LAN target reachable from the FRP client:
-
-```text
 10.10.20.40:80
 ```
 
-Users connect to the FRP server's assigned public service port.
+## HTTPS path: TLS stays encrypted through FRP
 
-## HTTPS
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as FRP Server
+    participant C as FRP Client
+    participant W as HTTPS App
 
-Example target:
-
-```text
-127.0.0.1:443
+    B->>S: TLS connection to public service port
+    S->>C: encrypted TCP stream
+    C->>W: encrypted TCP stream
+    W-->>B: target application's certificate + TLS response
 ```
 
-HTTPS is **TCP passthrough**. FRP Auto Deploy does not terminate, replace, or automatically issue the target application's TLS certificate.
+FRP Auto Deploy does **not** terminate, replace, or automatically issue the target application's TLS certificate.
 
-If users access the application through a DNS hostname, the application behind the tunnel must present a certificate that is valid for the hostname users actually enter.
+## DNS hostname and certificate
 
-## Hostname example
+Suppose:
 
-Suppose the service is published on port `6005` and the public service hostname is `fw.example.com`:
+```text
+Public service hostname : fw.example.com
+Public service port     : 6005
+Target                   : 127.0.0.1:443
+```
+
+Users connect to:
 
 ```text
 https://fw.example.com:6005
 ```
 
-The target HTTPS server must be prepared for that TLS hostname where applicable.
+The certificate presented by the **target application** must be valid for `fw.example.com` where hostname verification applies.
 
 ## Multiple web services on one client
 
-A single client can publish several applications, each with its own Service ID and persistent public port:
+```mermaid
+flowchart LR
+    U[Users]
+    S[FRP Server]
+    C[Client A]
+    A[web-admin\n127.0.0.1:443]
+    B[api\n127.0.0.1:8080]
+    D[lan-ui\n10.10.20.50:8443]
 
-```text
-web-admin   -> 127.0.0.1:443
-api         -> 127.0.0.1:8080
-lan-ui      -> 10.10.20.50:8443
+    U -->|6001| S
+    U -->|6002| S
+    U -->|6003| S
+    S --> C
+    C --> A
+    C --> B
+    C --> D
 ```
 
-Use stable Service IDs so lifecycle operations remain unambiguous.
+Give each service a stable Service ID so later lifecycle and target changes remain unambiguous.
+
+## Common failure patterns
+
+| Symptom | Likely layer to check |
+| --- | --- |
+| Connection timeout | public firewall/NAT/service port |
+| FRP path works but target returns connection refused | target listener/bind address |
+| IP works, hostname does not | DNS/hairpin NAT |
+| HTTPS certificate warning | target app certificate/SAN |
+| LAN web target fails only | client-to-LAN routing/ACL |
+
+<Tip>
+  First prove the target is reachable from the FRP client. Then prove the public service port is reachable. Treat DNS and TLS hostname validation as later layers.
+</Tip>

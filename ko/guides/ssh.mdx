@@ -1,0 +1,80 @@
+---
+title: "SSH"
+description: "Local 또는 LAN SSH를 persistent public port로 게시하고 각 hop을 진단합니다."
+icon: "terminal"
+---
+
+# SSH
+
+SSH는 가장 자주 사용하는 서비스입니다.
+
+## Client 자신의 SSH
+
+```mermaid
+flowchart LR
+    U[관리자 PC] -->|ssh -p 6000| S[FRP Server]
+    S -->|FRP tunnel| C[Remote Client]
+    C -->|127.0.0.1:22| D[sshd]
+```
+
+일반 target:
+
+```text
+Target host : 127.0.0.1
+Target port : 22
+SSH user    : existing-user
+```
+
+SSH account와 `sshd`는 이미 준비되어 있어야 합니다.
+
+## 접속
+
+```bash
+ssh -p <public-port> <ssh-user>@<server-public-IP>
+```
+
+Public service hostname 사용 시:
+
+```bash
+ssh -p <public-port> <ssh-user>@fw.example.com
+```
+
+## 다른 LAN Server의 SSH 게시
+
+```mermaid
+flowchart LR
+    U[관리자] -->|public port| S[FRP Server]
+    S --> C[FRP Client]
+    C -->|10.10.20.30:22| H[LAN Server]
+```
+
+Client에서 해당 `10.10.20.30:22`로 직접 연결 가능해야 합니다.
+
+## 문제 확인 순서
+
+```mermaid
+flowchart TD
+    A[SSH 실패] --> B{Target sshd가 listen 중?}
+    B -->|아니오| C[Target SSH 수정]
+    B -->|예| D{FRP Client가 target:22 연결 가능?}
+    D -->|아니오| E[LAN routing/firewall/ACL]
+    D -->|예| F{Server에 Service + public port 보임?}
+    F -->|아니오| G[Service config / apply]
+    F -->|예| H{외부에서 public port 도달?}
+    H -->|아니오| I[Server firewall/NAT/SG]
+    H -->|예| J[SSH user/key/auth 확인]
+```
+
+```bash
+ss -lntp | grep ':22'
+sudo frpctl show services
+sudo frpctl doctor
+```
+
+Server:
+
+```bash
+sudo frpctl show client <CLIENT-ID> services
+```
+
+Disable은 port를 유지하며 게시만 중지하고, Release는 port reservation을 반환합니다.
