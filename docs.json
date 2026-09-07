@@ -6,6 +6,31 @@
   "colors": {
     "primary": "#16A34A"
   },
+  "navbar": {
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/datarelay-labs/frp-auto-deploy"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Quick Start",
+      "href": "/getting-started/quickstart"
+    }
+  },
+  "search": {
+    "prompt": "Search FRP Auto Deploy docs..."
+  },
+  "seo": {
+    "indexing": "navigable",
+    "metatags": {
+      "canonical": "https://frp.xdr.ooo"
+    }
+  },
+  "metadata": {
+    "timestamp": true
+  },
   "navigation": {
     "groups": [
       {
@@ -14,7 +39,8 @@
           "index",
           "getting-started/overview",
           "getting-started/quickstart",
-          "getting-started/server-installation"
+          "getting-started/server-installation",
+          "getting-started/linux-client"
         ]
       },
       {
@@ -22,7 +48,10 @@
         "pages": [
           "guides/enrollment",
           "guides/zero-touch",
-          "guides/services"
+          "guides/services",
+          "guides/ssh",
+          "guides/http-https",
+          "guides/custom-tcp-lan"
         ]
       },
       {
@@ -44,6 +73,10 @@
         "group": "Operations",
         "pages": [
           "operations/maintenance",
+          "operations/updates",
+          "operations/backup-restore",
+          "operations/diagnostics",
+          "operations/lifecycle",
           "troubleshooting/overview"
         ]
       },
@@ -53,7 +86,8 @@
           "security/overview",
           "reference/platforms",
           "reference/network-ports",
-          "reference/release-status"
+          "reference/release-status",
+          "reference/limitations"
         ]
       }
     ]
