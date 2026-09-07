@@ -1,0 +1,55 @@
+---
+title: "Backup & Restore"
+description: "Protect FRP Auto Deploy identity, PKI, registry, and configuration before disaster recovery or major maintenance."
+---
+
+# Backup & Restore
+
+FRP Auto Deploy keeps important trust and reservation state on the server. Backups protect the information required to preserve existing clients and public service ports.
+
+## Create a backup
+
+```bash
+sudo frpctl create backup
+```
+
+Important server state includes configuration, the project PKI, the FRP token, registry data, and related enrollment metadata according to the supported backup format.
+
+## Restore a backup
+
+```bash
+sudo frpctl restore backup <path>
+```
+
+Restore is not a blind file copy. The supported restore flow validates the archive, snapshots the current state, restores the saved state, restarts the required services, and runs health checks. It is designed to roll back when restoration cannot be completed consistently.
+
+## Why the PKI matters
+
+Existing clients trust the project private CA. Losing the CA private key can require advanced recovery and trust re-establishment. A normal software reinstall or update does not intentionally rotate that CA.
+
+## Minimum disaster-recovery state
+
+Protect at least:
+
+```text
+/etc/frp-auto-deploy/pki/
+/etc/frp/server_token
+/etc/frp-auto-deploy/config.json
+/var/lib/frp-auto-deploy/registry.json
+```
+
+Also preserve enrollment/bootstrap state when your recovery policy requires it.
+
+Store backups securely because they contain sensitive server state.
+
+## After restore
+
+Verify:
+
+```bash
+sudo frpctl show status
+sudo frpctl show clients
+sudo frpctl doctor
+```
+
+Then test one or more published services through their expected public ports.
