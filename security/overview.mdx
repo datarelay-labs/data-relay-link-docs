@@ -1,0 +1,68 @@
+---
+title: "Security Overview"
+description: "Understand enrollment trust, management identity, secret handling, and security boundaries."
+---
+
+# Security Overview
+
+FRP Auto Deploy separates FRP tunnel authentication from management-plane authentication.
+
+## FRP tunnel
+
+The FRP control/data tunnel uses FRP transport security and the FRP server token.
+
+- Direct mode uses FRP native TLS
+- Enterprise single-443 uses FRP control over WSS
+- The FRP token authenticates the tunnel only
+
+The FRP token is **not** an Enrollment Code, Bootstrap Ticket, or management API credential.
+
+## Enrollment and management HTTPS
+
+Enrollment and signed client management use HTTPS only. There is no supported production plain-HTTP fallback.
+
+The server creates a project private CA. During first enrollment, the client validates the CA fingerprint supplied by the bootstrap flow and then stores the CA certificate for later verified HTTPS communication.
+
+## Persistent management identity
+
+After enrollment, the client holds a persistent ECDSA P-256 management identity. The private key stays on the client.
+
+Signed management requests bind operation data to a timestamp and nonce so replayed or stale requests can be rejected.
+
+## Enrollment credentials
+
+Manual Enrollment Codes and Zero-Touch Bootstrap Tickets are short-lived credentials.
+
+A Zero-Touch Bootstrap Ticket is:
+
+- high entropy
+- short-lived
+- first-machine bound
+- single-use after successful enrollment
+- hashed at rest on the server
+- sensitive until used, expired, or revoked
+
+Do not place generated one-line bootstrap commands in public tickets, public chat, analytics, or logs.
+
+## Secrets
+
+Treat these as secrets:
+
+- FRP server token
+- Enrollment Code
+- Bootstrap Ticket
+- Client management private key
+- Management MAC material
+- CA private key
+- TLS private key
+- Generated FRP configuration containing the token
+
+## Security boundaries
+
+FRP Auto Deploy does not claim to protect secrets from a compromised root account on the server or client.
+
+The product also does not automatically manage external firewalls, cloud security groups, DNS records, SSH credentials, or application TLS certificates.
+
+## Fail closed
+
+Unknown identity, invalid signatures, CA mismatches, corrupted registry state, and ambiguous client selectors should fail rather than silently guessing.
