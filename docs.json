@@ -134,7 +134,9 @@
           },
           {
             "group": "보안 & 참고",
-            "pages": []
+            "pages": [
+              "ko/reference/platforms"
+            ]
           }
         ]
       }
