@@ -5,14 +5,20 @@ description: "Use a friendly DNS name for published services without changing FR
 
 # DNS & Public Hostname
 
-FRP Auto Deploy treats the server's **Public IP** and optional **Public Hostname** as different concepts.
+FRP Auto Deploy separates the server's **Public IP** from an optional **Public Hostname**.
+
+```mermaid
+flowchart TD
+    S[FRP Auto Deploy server]
+    IP[Public IP\nInfrastructure/control fallback]
+    DNS[Public Hostname\nHuman-friendly service alias]
+    S --> IP
+    S --> DNS
+```
 
 ```text
-Public IP
-= primary infrastructure/control endpoint
-
-Public Hostname
-= optional user-facing alias for published services
+Public IP       = primary infrastructure/control reference
+Public Hostname = optional user-facing alias for published services
 ```
 
 ## Example
@@ -20,23 +26,25 @@ Public Hostname
 ```text
 Public IP       203.0.113.10
 Public Hostname fw.example.com
+SSH public port 6000
+HTTPS port      6005
 ```
 
-With a published SSH service on port `6000`, both can be used:
+Both SSH forms can reach the same published service:
 
 ```bash
-ssh -p 6000 user@fw.example.com
 ssh -p 6000 user@203.0.113.10
+ssh -p 6000 user@fw.example.com
 ```
 
-For HTTP or HTTPS passthrough:
+Web examples:
 
 ```text
-http://fw.example.com:6001
-https://fw.example.com:6002
+http://fw.example.com:6004
+https://fw.example.com:6005
 ```
 
-## Configure the hostname
+## Configure the service hostname
 
 ```bash
 sudo frpctl set server hostname fw.example.com
@@ -48,24 +56,52 @@ Remove it with:
 sudo frpctl unset server hostname
 ```
 
-Setting the hostname does **not** change:
+This metadata change does **not** change CLIENT ID, Service ID, public-port reservations, project CA, or FRP control identity.
 
-- CLIENT ID
-- Service ID
-- Public port reservations
-- FRP control identity
-- Project CA
+## DNS remains external
 
-## DNS remains your responsibility
+```mermaid
+flowchart LR
+    D[Your DNS provider] -->|A / AAAA record| P[Public FRP entry point]
+    U[User] -->|fw.example.com| D
+    P --> S[FRP server or firewall/NAT]
+```
 
-FRP Auto Deploy does not automatically create DNS records or call Route53, Cloudflare DNS, or another DNS provider API.
+FRP Auto Deploy does not call Route53, Cloudflare DNS, DNSZi, or another provider API. Create the DNS record yourself so the hostname resolves to the **public entry point**.
 
-Create the required A/AAAA record yourself so the hostname resolves to the public entry point for the FRP server or its firewall/NAT.
+## Server behind NAT
 
-## HTTPS passthrough
+If the FRP server is private, the hostname should normally resolve to the **firewall/public IP**, not the private server address.
 
-FRP Auto Deploy does not terminate application HTTPS for published services. HTTPS is TCP passthrough, so the target web application's certificate must cover the hostname users connect to.
+```mermaid
+flowchart LR
+    U[User] -->|fw.example.com| F[Public firewall / NAT]
+    F -->|DNAT| S[Private FRP server]
+```
+
+## HTTPS certificate behavior
+
+Published HTTPS is TCP passthrough:
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as FRP server
+    participant C as FRP client
+    participant W as Target HTTPS app
+
+    B->>S: TLS to fw.example.com:6005
+    S->>C: encrypted TCP stream
+    C->>W: encrypted TCP stream
+    W-->>B: target application's certificate
+```
+
+FRP Auto Deploy does not issue or replace the published application's certificate. The **target application certificate** must be valid for the hostname users enter.
 
 ## Hairpin NAT
 
-Clients on the same internal LAN may be unable to reach the public hostname through the firewall's public IP if the firewall does not support hairpin NAT. In that case, use hairpin NAT or split DNS.
+Internal clients may fail to reach the public hostname through the firewall's public IP if the firewall does not support hairpin NAT. Use hairpin NAT or split DNS when needed.
+
+<Tip>
+  When debugging a hostname problem, first prove the service works by public IP + public port. If IP works and hostname fails, debug DNS/certificate/hairpin behavior before changing FRP state.
+</Tip>

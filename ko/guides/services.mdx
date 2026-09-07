@@ -5,77 +5,118 @@ description: "SSH, HTTP, HTTPS, Custom TCP와 LAN 서비스를 게시하는 방�
 
 # 서비스 게시
 
-한 클라이언트는 하나 이상의 TCP 서비스를 게시할 수 있습니다.
+**Service**는 Enrollment된 Client가 FRP server를 통해 외부에 게시하는 TCP target 하나입니다. 한 Client에 여러 Service를 둘 수 있습니다.
 
-## SSH
+## 모든 서비스의 공통 경로
 
-일반적인 타깃:
+```mermaid
+flowchart LR
+    U[인터넷 사용자]
+    S[FRP Server\npublic-port]
+    C[FRP Client]
+    T[target-host:target-port]
 
-```text
-127.0.0.1:22
+    U -->|public TCP port| S
+    S -->|FRP tunnel| C
+    C -->|normal TCP| T
 ```
 
-접속 예:
+Target은 Client 자신의 localhost일 수도 있고 Client가 접근 가능한 다른 LAN host일 수도 있습니다.
 
-```bash
-ssh -p <public-port> user@<server-public-IP-or-hostname>
+## 서비스 종류
+
+| 종류 | 일반 Target | 외부 접속 예 | 주의 |
+| --- | --- | --- | --- |
+| SSH | `127.0.0.1:22` | `ssh -p 6000 user@server` | user/sshd가 이미 있어야 함 |
+| HTTP | `127.0.0.1:80` | `http://server:6001` | TCP forwarding |
+| HTTPS | `127.0.0.1:443` | `https://server:6002` | TLS는 target까지 passthrough |
+| Custom TCP | `10.10.20.30:5432` | app-specific | target 인증 유지 |
+
+## 예 1 — Client 자신의 SSH만 게시
+
+```mermaid
+flowchart LR
+    U[관리자] -->|TCP 6000| S[FRP Server]
+    S --> C[Client A]
+    C -->|127.0.0.1:22| SSH[sshd]
 ```
 
-## HTTP
+## 예 2 — 한 Client에서 여러 서비스
 
-```text
-127.0.0.1:80
+```mermaid
+flowchart LR
+    U[Internet user]
+    S[FRP Server]
+    C[Client A]
+    A[SSH\n127.0.0.1:22]
+    B[HTTPS\n127.0.0.1:443]
+    D[API\n127.0.0.1:8080]
+
+    U -->|6000| S
+    U -->|6001| S
+    U -->|6002| S
+    S --> C
+    C --> A
+    C --> B
+    C --> D
 ```
 
-또는 클라이언트가 접근 가능한 다른 LAN 호스트:
+각 Service는 stable Service ID와 persistent public-port reservation을 갖습니다.
 
-```text
-10.10.20.40:80
+## 예 3 — Client를 LAN gateway처럼 사용
+
+```mermaid
+flowchart LR
+    U[Internet user]
+    S[FRP Server]
+    C[FRP Client\ngateway host]
+    H1[10.10.20.30:22\nLAN SSH]
+    H2[10.10.20.40:80\nLAN HTTP]
+    H3[10.10.20.50:443\nLAN HTTPS]
+
+    U --> S --> C
+    C --> H1
+    C --> H2
+    C --> H3
 ```
 
-## HTTPS
+Client가 해당 LAN target에 normal IP/TCP로 도달할 수 있어야 합니다.
 
-HTTPS는 **TCP passthrough**입니다. FRP Auto Deploy가 애플리케이션 TLS를 종료하거나 인증서를 교체하지 않습니다.
+## HTTPS는 passthrough
 
-```text
-127.0.0.1:443
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as FRP Server
+    participant C as FRP Client
+    participant W as HTTPS App
+
+    B->>S: TLS to public service port
+    S->>C: encrypted TCP
+    C->>W: encrypted TCP
+    W-->>B: target app certificate
 ```
 
-DNS hostname으로 접속시키려면 실제 애플리케이션 인증서가 그 hostname에 유효해야 합니다.
+FRP Auto Deploy가 TLS를 종료하거나 인증서를 교체하지 않습니다. 사용자가 `fw.example.com`으로 접속한다면 실제 target application certificate가 해당 hostname에 유효해야 합니다.
 
-## Custom TCP
+## Public port lifecycle
 
-예:
-
-```text
-Grafana      127.0.0.1:3000
-API          10.10.20.20:8080
-PostgreSQL   10.10.20.30:5432
+```mermaid
+stateDiagram-v2
+    [*] --> Published
+    Published --> Disabled: disable service
+    Disabled --> Published: enable service
+    Published --> Published: edit + apply
+    Published --> Released: release service
+    Disabled --> Released: release service
+    Released --> [*]
 ```
 
-## 클라이언트를 LAN 게이트웨이로 사용
+- **Disable**: 게시 중지, port 예약 유지
+- **Enable**: 같은 port로 재개
+- **Edit + apply**: target 변경, reservation 유지 목표
+- **Release**: public port를 pool로 반환
 
-클라이언트 자신이 아니라 같은 내부망의 다른 서버 서비스를 게시할 수 있습니다.
-
-```text
-Internet
-   |
-FRP Server:<public-port>
-   |
-FRP Client
-   |
-10.10.20.30:22
-```
-
-클라이언트가 해당 내부 호스트에 정상 IP 연결만 할 수 있으면 됩니다.
-
-## 수명주기
-
-```text
-Disable  -> 게시 중지, 공개 포트 예약 유지
-Enable   -> 같은 공개 포트로 재개
-Edit     -> 타깃 변경, 예약 유지
-Release  -> 공개 포트 예약 반환
-```
-
-`disable`, `release`, `revoke`는 서로 다른 동작입니다.
+<Warning>
+  Service를 외부에 게시하면 해당 application의 공격 표면도 외부로 열립니다. Application authentication, ACL, host firewall, database 권한은 계속 유지하세요.
+</Warning>

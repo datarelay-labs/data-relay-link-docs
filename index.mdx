@@ -5,115 +5,129 @@ description: "Zero-Touch remote access management for systems behind NAT and fir
 
 # FRP Auto Deploy
 
-**Secure remote access to systems behind NAT and firewalls — without VPNs, inbound client firewall changes, or hand-written FRP configuration.**
+**Reach systems behind NAT and firewalls without building a VPN, opening inbound ports on every remote client, or hand-writing FRP configuration.**
 
-FRP Auto Deploy keeps the official `fatedier/frp` binaries as the tunnel engine and adds the operational layer around them: secure enrollment, persistent client identity, service publishing, public-port allocation, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
+FRP Auto Deploy keeps official `fatedier/frp` as the tunnel engine and adds secure enrollment, persistent identity, service/port management, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
 
 <Note>
-  Designed for a few to a few dozen systems. It is intentionally not a 100+ node fleet-orchestration platform.
+  Designed for **a few systems to a few dozen clients**. It is intentionally not a 100+ endpoint fleet-orchestration platform.
 </Note>
 
-## The basic idea
+## Understand it in 30 seconds
 
-```text
-                       Internet / Operator
-                               |
-                               v
-                    +-----------------------+
-                    | FRP Auto Deploy       |
-                    | Server / Public entry |
-                    +-----------+-----------+
-                                ^
-                                | outbound FRP tunnel
-               +----------------+----------------+
-               |                                 |
-        +------+-------+                  +------+-------+
-        | Client A     |                  | Client B     |
-        | behind NAT   |                  | behind NAT   |
-        +------+-------+                  +------+-------+
-               |                                 |
-       localhost services                 reachable LAN hosts
-        SSH / HTTPS / TCP                  SSH / HTTP / TCP
+```mermaid
+flowchart LR
+    O[Operator / Internet user]
+    S[FRP Auto Deploy server\npublic entry point]
+    C1[Client A\nbehind NAT/firewall]
+    C2[Client B\nbehind NAT/firewall]
+    L1[Local SSH / HTTPS]
+    L2[Reachable LAN SSH / HTTP]
+
+    C1 -->|outbound FRP tunnel| S
+    C2 -->|outbound FRP tunnel| S
+    O -->|persistent public service port| S
+    S --> C1
+    S --> C2
+    C1 --> L1
+    C2 --> L2
 ```
 
-The remote client initiates the connection toward the FRP server. In normal deployments, the client does not need its own public IP, an inbound NAT rule, or an inbound firewall opening for the published service.
+The remote client starts the tunnel **outbound** toward the server. That is why the client normally does not need a public IP, inbound NAT rule, or inbound firewall opening for the published service.
 
 ## Choose your path
 
 <CardGroup cols={2}>
-  <Card title="I want the fastest first connection" icon="rocket" href="/getting-started/quickstart">
-    Install one server, issue a Zero-Touch command, and connect to SSH.
+  <Card title="I am completely new" icon="circle-question" href="/getting-started/concepts">
+    Learn Server, Client, CLIENT ID, Service, public port, and the three network paths visually.
   </Card>
 
-  <Card title="I am deploying the server" icon="server" href="/getting-started/server-installation">
-    Review ports, deployment modes, firewall responsibilities, and installation checks.
+  <Card title="I want a working SSH connection" icon="rocket" href="/getting-started/quickstart">
+    Follow the shortest end-to-end path from empty server to remote SSH.
   </Card>
 
-  <Card title="I am onboarding a remote Linux host" icon="laptop" href="/getting-started/linux-client">
-    Choose Zero-Touch or manual enrollment and verify the client.
+  <Card title="I am deploying infrastructure" icon="server" href="/getting-started/server-installation">
+    Choose Direct vs single-443, understand required ports, and handle firewall/NAT correctly.
+  </Card>
+
+  <Card title="I am onboarding a client" icon="laptop" href="/getting-started/linux-client">
+    Choose Zero-Touch or manual Enrollment Code and verify the client.
   </Card>
 
   <Card title="I need to publish an application" icon="network-wired" href="/guides/services">
     Publish SSH, HTTP, HTTPS passthrough, custom TCP, or another reachable LAN target.
   </Card>
 
-  <Card title="I operate the environment" icon="terminal" href="/frpctl/overview">
-    Manage clients, services, enrollments, diagnostics, and lifecycle operations with `frpctl`.
-  </Card>
-
-  <Card title="My server is behind a firewall" icon="shield" href="/deployment/firewall-nat">
-    Configure DNAT correctly and keep public service-port reservations understandable.
+  <Card title="I want expert internals" icon="sitemap" href="/reference/architecture">
+    See control plane vs data plane, identity, trust establishment, persistent state, and failure boundaries.
   </Card>
 </CardGroup>
 
-## What it gives you
+## What happens from enrollment to connection
 
-- Zero-Touch or manual client enrollment
-- Stable CLIENT ID independent of hostname/IP changes
-- SSH, HTTP, HTTPS passthrough, and custom TCP publishing
-- Multiple services per client
-- Access to LAN services reachable from the client
-- Persistent public service-port reservations
-- Clear `disable`, `release`, and `revoke` lifecycle semantics
-- Read-only diagnostics with `frpctl doctor`
-- Backup/restore and controlled updates
-- Direct and Enterprise single-443 deployment modes
-- Optional DNS hostname for user-friendly published-service access
+```mermaid
+sequenceDiagram
+    participant A as Server admin
+    participant S as FRP Auto Deploy server
+    participant C as Remote client
+    participant U as Remote user
+    participant T as Target service
 
-## Before you deploy
+    A->>S: Create Zero-Touch enrollment
+    S-->>A: One-time bootstrap command
+    A-->>C: Send command privately
+    C->>S: HTTPS enrollment / trust establishment
+    S-->>C: Persistent identity + service config
+    C->>S: Outbound FRP control tunnel
+    U->>S: Connect to assigned public service port
+    S->>C: Forward through FRP tunnel
+    C->>T: Connect to target host:port
+```
 
-<AccordionGroup>
-  <Accordion title="Do I need to change the remote client firewall?">
-    Normally no inbound rule is required on the remote client because the FRP client initiates the tunnel toward the public FRP server. The client still needs outbound connectivity to the configured server endpoints.
-  </Accordion>
+## What you can publish
 
-  <Accordion title="Does FRP Auto Deploy configure my cloud firewall or NAT?">
-    No. AWS Security Groups, OCI Security Lists, external firewalls, UFW/firewalld/iptables, and DNAT remain infrastructure responsibilities.
-  </Accordion>
+| Service | Typical target | User connects to |
+| --- | --- | --- |
+| SSH | `127.0.0.1:22` | `ssh -p <public-port> user@server` |
+| HTTP | `127.0.0.1:80` or LAN host | `http://server:<public-port>` |
+| HTTPS | `127.0.0.1:443` or LAN host | `https://server:<public-port>` |
+| Custom TCP | `host:any-tcp-port` | application-specific client |
 
-  <Accordion title="Does HTTPS terminate on FRP Auto Deploy?">
-    No. Published HTTPS is TCP passthrough. The target application remains responsible for the certificate presented to end users.
-  </Accordion>
-
-  <Accordion title="Can one client publish services on other LAN hosts?">
-    Yes. A client can act as a small gateway for TCP services on other hosts that it can reach normally over the LAN.
-  </Accordion>
-</AccordionGroup>
+One client can publish several services, and a client can also publish services on **other LAN hosts it can reach**.
 
 ## Current stable baseline
 
 | Item | Current |
 | --- | --- |
 | Stable project release | **v2.1.2** |
-| Project version on `main` | **2.1.3** |
+| Project version on `main` | **2.1.3** development |
 | Pinned / tested FRP | **v0.70.1** |
 | Stable client scope | **Linux/systemd** |
+| Best-documented real-VM baseline | **Ubuntu 22.04 / 24.04** |
 | Default deployment | **Direct** |
 
-Windows and macOS client automation are development targets, but they are **not stable-supported in the current stable release**.
+Windows and macOS automation are development targets and are **not stable-supported in v2.1.2**.
+
+## Four rules that prevent most mistakes
+
+<AccordionGroup>
+  <Accordion title="The client usually needs outbound access, not inbound port forwarding">
+    The remote client initiates enrollment and the FRP control tunnel toward the public server. The public server/firewall still needs the required inbound ports.
+  </Accordion>
+
+  <Accordion title="FRP Auto Deploy does not configure your firewall or DNS provider">
+    AWS Security Groups, OCI Security Lists, external NAT, UFW/firewalld/iptables, and DNS records remain infrastructure responsibilities.
+  </Accordion>
+
+  <Accordion title="HTTPS publishing is TCP passthrough">
+    FRP Auto Deploy does not terminate the published application's TLS. The target application must present a certificate valid for the hostname users actually enter.
+  </Accordion>
+
+  <Accordion title="Disable, revoke, and release are intentionally different">
+    Disable stops publication but keeps the port. Revoke blocks management identity. Release returns a public-port reservation.
+  </Accordion>
+</AccordionGroup>
 
 <Tip>
-  If you are new to the product, start with the [Quick Start](/getting-started/quickstart). If something does not work, use [Troubleshooting](/troubleshooting/overview) before editing generated state manually.
+  New user: read [Concepts & Mental Model](/getting-started/concepts), then [Quick Start](/getting-started/quickstart). Experienced operator: jump to [frpctl](/frpctl/overview), [Architecture](/reference/architecture), or [Troubleshooting](/troubleshooting/overview).
 </Tip>
-
-> This site is user documentation. Internal roadmap, release-engineering gates, and product-development notes are intentionally kept separate from operational guides.

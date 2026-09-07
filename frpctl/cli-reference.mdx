@@ -5,13 +5,36 @@ description: "Canonical frpctl command grammar and everyday operator commands."
 
 # CLI Reference
 
-`frpctl` is the primary operator interface. The canonical grammar is:
+This page documents the **stable v2.1.2** CLI baseline. The repository `main` branch is a 2.1.3 development channel and can contain extra commands that are not part of this stable reference.
+
+## Grammar
 
 ```text
 <verb> <resource> [target] [property] [value]
 ```
 
-The canonical client selector is the immutable **CLIENT ID**. Unique labels or hostnames may be accepted as typed shortcuts, but identity is not based on hostname or IP address.
+Host role decides which commands appear in Tab/help. There is no separate `server ...` / `client ...` top-level namespace.
+
+## Interactive keys
+
+```text
+Tab   show/complete valid next tokens
+?     detailed contextual explanation
+Enter execute
+↑/↓   session-only history
+```
+
+Tab does not execute commands. `frpctl` history is not written to disk.
+
+## Client selector
+
+The canonical selector is **CLIENT ID**: immutable short machine identity. Changing label, note, tags, or hostname never changes CLIENT ID.
+
+- `show clients` prints CLIENT ID first.
+- Tab completes CLIENT ID.
+- A unique label/hostname can be typed manually.
+- Ambiguous selectors fail closed.
+- `user@host:port` is not a client selector.
 
 ## Show
 
@@ -29,22 +52,21 @@ show services
 show info
 ```
 
-## Set and unset
+`status` and `version` remain compatibility shortcuts for the `show` form.
 
-Server-side examples:
+## Set
+
+Server:
 
 ```text
 set client <ID> label <value>
 set client <ID> note <value>
 set client <ID> tag <key> <value>
-unset client <ID> label
-unset client <ID> note
-unset client <ID> tag <key>
+set installer-url <url>
 set server hostname <fqdn>
-unset server hostname
 ```
 
-Client-side service edits:
+Client:
 
 ```text
 set service <service-id> target-host <host>
@@ -53,9 +75,20 @@ set service <service-id> ssh-user <user>
 set service <service-id> name <value>
 ```
 
-Service IDs are stable. Pending client-side changes become live after `apply`.
+Service IDs are immutable. Client-side pending changes become live after `apply`.
 
-## Create
+## Unset
+
+```text
+unset client <ID> label
+unset client <ID> note
+unset client <ID> tag <key>
+unset server hostname
+```
+
+`unset` removes metadata; it does not release public ports or change identity.
+
+## Create / add
 
 ```text
 create zero-touch
@@ -66,7 +99,9 @@ create backup [path]
 add service [--preset ssh|http|https|custom] ...
 ```
 
-## Service lifecycle
+`create zero-touch` is the recommended everyday onboarding path.
+
+## Enable / disable / apply / discard
 
 ```text
 enable service <service-id>
@@ -75,41 +110,90 @@ apply
 discard
 ```
 
-Disabling publication keeps the public port reservation. Re-enabling uses the same reserved port.
+Disabling a service keeps the public-port reservation. `apply` does not release server ports.
 
-## Revoke, purge, release, restore
+## Revoke / release / restore
 
 ```text
 revoke client <ID>
 revoke enrollment <ID>
-purge enrollment <ID>
-purge enrollments --older-than <days>
 release service <ID> <service-id>
 release client <ID>
 restore backup <path>
 ```
 
-The meanings are deliberately different:
+```mermaid
+flowchart LR
+    U[unset] -->|metadata only| M[label / note / tag]
+    V[revoke] -->|block identity / credential| I[management access]
+    R[release] -->|return reservation| P[public port pool]
+```
 
-- **revoke** blocks management identity or an active enrollment credential
-- **release** returns a public port reservation
-- **purge** removes terminal enrollment metadata
+These are never aliases. There is intentionally no ambiguous `delete client` command.
 
-There is no `delete client` alias for these distinct operations.
-
-## Update and diagnostics
+## Update
 
 ```text
 update project [--check]
 update frp [--check]
+```
+
+FRP remains pinned to the tested project version. `show upstream` is informational.
+
+## Other
+
+```text
 doctor
 help
 help show
 help set client
+help legacy
 ?
+show ?
+set client <ID> ?
+menu
 history
 clear
 exit
 ```
 
-FRP itself remains pinned to the tested project version; `show upstream` is informational and does not automatically adopt the latest upstream FRP.
+## Stable enrollment states
+
+`show enrollments` can represent enrollment records in normalized lifecycle states such as:
+
+```text
+pending
+bound
+completed
+expired
+revoked
+```
+
+Secrets are never printed by `show`, Tab, or help output.
+
+<Note>
+  The **2.1.3 development tree** adds explicit terminal enrollment purge/retention commands and bootstrap-hostname controls. Do not assume those commands exist on a stable v2.1.2 server.
+</Note>
+
+## Compatibility aliases
+
+| Alias | Canonical |
+| --- | --- |
+| `clients` | `show clients` |
+| `client` / `client-info` | `show client` |
+| `client-set` / `edit-client` | `set client` / `unset client` |
+| `enroll` / `create-client` | `create enrollment` |
+| `enroll-bulk` | `create enrollments` |
+| `enrollments` | `show enrollments` |
+| `enrollment-revoke` | `revoke enrollment` |
+| `revoke` / `revoke-client` | `revoke client` |
+| `release-service` | `release service` |
+| `release-client` | `release client` |
+| `project-update` / `client-update` | `update project` |
+| `frp-update` / `server-update` | `update frp` |
+| `backup` | `create backup` |
+| `restore PATH` | `restore backup PATH` |
+| `upstream` | `show upstream` |
+| `audit` | `show audit` |
+| `services` / `manage` / `info` | `show services` / `add`\+`set service` / `show info` |
+| `status` / `version` | `show status` / `show version` |

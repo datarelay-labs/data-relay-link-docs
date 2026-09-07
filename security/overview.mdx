@@ -5,35 +5,62 @@ description: "Understand enrollment trust, management identity, secret handling,
 
 # Security Overview
 
-FRP Auto Deploy separates FRP tunnel authentication from management-plane authentication.
+FRP Auto Deploy separates **FRP tunnel authentication** from **management-plane trust**. Keeping those responsibilities separate is important when troubleshooting or reviewing risk.
 
-## FRP tunnel
+## Security model at a glance
 
-The FRP control/data tunnel uses FRP transport security and the FRP server token.
+```mermaid
+flowchart TB
+    subgraph TUNNEL[FRP tunnel plane]
+      FT[FRP token]
+      FC[FRP native TLS or WSS]
+    end
 
-- Direct mode uses FRP native TLS
-- Enterprise single-443 uses FRP control over WSS
-- The FRP token authenticates the tunnel only
+    subgraph MGMT[Enrollment / management plane]
+      EC[Enrollment Code / Bootstrap Ticket]
+      CA[Project private CA]
+      MI[Persistent client management identity]
+    end
+
+    EC --> CA --> MI
+    FT --> FC
+```
 
 The FRP token is **not** an Enrollment Code, Bootstrap Ticket, or management API credential.
 
-## Enrollment and management HTTPS
+## Trust establishment
 
-Enrollment and signed client management use HTTPS only. There is no supported production plain-HTTP fallback.
+```mermaid
+sequenceDiagram
+    participant C as New client
+    participant S as Server
 
-The server creates a project private CA. During first enrollment, the client validates the CA fingerprint supplied by the bootstrap flow and then stores the CA certificate for later verified HTTPS communication.
+    C->>S: Short-lived enrollment credential
+    S-->>C: CA bootstrap / expected trust material
+    C->>C: Verify CA fingerprint and certificate
+    C->>S: Verified HTTPS enrollment
+    S-->>C: Persistent ECDSA management identity + config
+    C->>S: Signed management requests thereafter
+```
+
+Enrollment and signed client management use verified HTTPS. There is no supported production plain-HTTP fallback.
+
+## FRP tunnel plane
+
+- Direct mode uses FRP native TLS for control.
+- Enterprise single-443 carries FRP control over WSS.
+- The FRP token authenticates the tunnel.
+- Published service traffic is forwarded through FRP after the proxy is registered.
 
 ## Persistent management identity
 
-After enrollment, the client holds a persistent ECDSA P-256 management identity. The private key stays on the client.
+After enrollment, the client keeps a persistent ECDSA P-256 management identity. The private key stays on the client.
 
-Signed management requests bind operation data to a timestamp and nonce so replayed or stale requests can be rejected.
+Signed management requests bind request data to freshness/replay protections such as timestamp/nonce handling so stale or replayed requests can be rejected.
 
-## Enrollment credentials
+## Zero-Touch credential properties
 
-Manual Enrollment Codes and Zero-Touch Bootstrap Tickets are short-lived credentials.
-
-A Zero-Touch Bootstrap Ticket is:
+A Bootstrap Ticket is designed to be:
 
 - high entropy
 - short-lived
@@ -42,27 +69,50 @@ A Zero-Touch Bootstrap Ticket is:
 - hashed at rest on the server
 - sensitive until used, expired, or revoked
 
-Do not place generated one-line bootstrap commands in public tickets, public chat, analytics, or logs.
+Do not paste generated bootstrap commands into public issue trackers, public chat, analytics, or long-lived logs.
 
-## Secrets
+## Secrets to protect
 
-Treat these as secrets:
-
-- FRP server token
-- Enrollment Code
-- Bootstrap Ticket
-- Client management private key
-- Management MAC material
-- CA private key
-- TLS private key
-- Generated FRP configuration containing the token
+| Secret | Why it matters |
+| --- | --- |
+| FRP server token | authenticates FRP tunnel clients |
+| Enrollment Code | first-time manual enrollment secret |
+| Bootstrap Ticket | first-time Zero-Touch secret |
+| Client management private key | persistent management identity |
+| Management MAC material | management request authentication |
+| CA private key | project management trust root |
+| TLS private key | server-side TLS identity where applicable |
+| Generated FRP config containing token | can expose tunnel credential |
 
 ## Security boundaries
 
-FRP Auto Deploy does not claim to protect secrets from a compromised root account on the server or client.
+```mermaid
+flowchart LR
+    P[FRP Auto Deploy protects] --> A[Enrollment trust]
+    P --> B[Credential separation]
+    P --> C[Identity consistency]
+    P --> D[Fail-closed management behavior]
 
-The product also does not automatically manage external firewalls, cloud security groups, DNS records, SSH credentials, or application TLS certificates.
+    O[Outside product boundary] --> E[Compromised local root]
+    O --> F[External firewall policy]
+    O --> G[DNS provider]
+    O --> H[SSH account/key policy]
+    O --> I[Application authentication/TLS]
+```
+
+The product does not claim to protect secrets from a fully compromised root account on the server or client.
 
 ## Fail closed
 
-Unknown identity, invalid signatures, CA mismatches, corrupted registry state, and ambiguous client selectors should fail rather than silently guessing.
+Conditions such as unknown identity, invalid signatures, CA mismatch, corrupted registry state, or ambiguous client selectors should fail rather than silently guess.
+
+<Warning>
+  Do not "fix" trust failures by using `curl -k`, disabling TLS verification, using plain HTTP enrollment, or copying secrets between clients.
+</Warning>
+
+## Related pages
+
+- [Architecture](/reference/architecture)
+- [Zero-Touch Enrollment](/guides/zero-touch)
+- [Lifecycle Semantics](/operations/lifecycle)
+- [Backup & Restore](/operations/backup-restore)

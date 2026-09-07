@@ -65,7 +65,8 @@
             "pages": [
               "frpctl/overview",
               "frpctl/cli-reference"
-            ]
+            ],
+            "icon": "terminal"
           },
           {
             "group": "Deployment",
@@ -73,7 +74,8 @@
               "deployment/modes",
               "deployment/firewall-nat",
               "deployment/dns-hostname"
-            ]
+            ],
+            "icon": "route"
           },
           {
             "group": "Operations",
@@ -84,7 +86,8 @@
               "operations/diagnostics",
               "operations/lifecycle",
               "troubleshooting/overview"
-            ]
+            ],
+            "icon": "screwdriver-wrench"
           },
           {
             "group": "Security & Reference",
@@ -96,7 +99,8 @@
               "reference/release-status",
               "reference/glossary",
               "reference/limitations"
-            ]
+            ],
+            "icon": "shield-halved"
           }
         ]
       },
@@ -111,32 +115,41 @@
               "ko/getting-started/quickstart",
               "ko/getting-started/server-installation",
               "ko/getting-started/linux-client"
-            ]
+            ],
+            "icon": "rocket"
           },
           {
             "group": "클라이언트 & 서비스",
             "pages": [
               "ko/guides/zero-touch",
               "ko/guides/services"
-            ]
+            ],
+            "icon": "network-wired"
           },
           {
             "group": "frpctl",
             "pages": [
               "ko/frpctl/overview"
-            ]
+            ],
+            "icon": "terminal"
           },
           {
             "group": "배포",
             "pages": [
-              "ko/deployment/firewall-nat"
-            ]
+              "ko/deployment/modes",
+              "ko/deployment/firewall-nat",
+              "ko/deployment/dns-hostname"
+            ],
+            "icon": "route"
           },
           {
             "group": "운영 & 문제 해결",
             "pages": [
+              "ko/operations/diagnostics",
+              "ko/operations/lifecycle",
               "ko/operations/troubleshooting"
-            ]
+            ],
+            "icon": "screwdriver-wrench"
           },
           {
             "group": "보안 & 참고",
@@ -145,7 +158,8 @@
               "ko/reference/architecture",
               "ko/security/overview",
               "ko/reference/glossary"
-            ]
+            ],
+            "icon": "shield-halved"
           }
         ]
       }

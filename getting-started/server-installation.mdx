@@ -5,17 +5,64 @@ description: "Install and verify the FRP Auto Deploy server using the current st
 
 # Server Installation
 
-FRP Auto Deploy uses a Linux server as the public entry point. The server runs the official FRP server binary plus the enrollment, registry, lifecycle, and `frpctl` management layer.
+The FRP Auto Deploy server is the public entry point. It runs official `frps` plus enrollment, registry, lifecycle, and `frpctl` management components.
 
-## Before you start
+## Recommended first environment
 
-Prepare a Linux server that remote clients can reach over the Internet. The server can have a public IP directly or sit behind a firewall/NAT device that forwards the required ports.
+For the simplest first deployment, use an **Ubuntu 24.04 x86_64** server with a direct public IP. Ubuntu 22.04/24.04 are the documented real-VM baseline for the stable release.
 
-FRP Auto Deploy does **not** automatically modify cloud security groups, external firewalls, NAT rules, UFW, firewalld, or iptables.
+Other Linux families have different validation levels; see [Supported Platforms](/reference/platforms).
+
+## Choose the topology first
+
+```mermaid
+flowchart TD
+    A[Start] --> B{Can the server receive\npublic Internet traffic?}
+    B -->|Direct public IP| C[Direct mode\n443 + 6099 + service range]
+    B -->|Behind firewall/NAT| D[Configure DNAT\npublic endpoints -> internal server]
+    C --> E{Does the client network\nrequire everything on TLS/443?}
+    D --> E
+    E -->|No| F[Use Direct]
+    E -->|Yes / TLS reset on non-standard ports| G[Consider Enterprise single-443]
+```
+
+<Note>
+  NAT is a network topology, not a third FRP Auto Deploy mode. The two product modes are **Direct** and **Enterprise single-443**.
+</Note>
+
+## Direct mode defaults
+
+```mermaid
+flowchart LR
+    I[Internet]
+    S[FRP Auto Deploy server]
+    I -->|TCP 443\nFRP control| S
+    I -->|TCP 6099\nEnrollment / management HTTPS| S
+    I -->|TCP 6000-6098\nPublished services| S
+```
+
+TCP/22 is optional for your own administrative SSH access to the server; it is not part of the FRP Auto Deploy tunnel path.
+
+## If the server is behind NAT
+
+Example:
+
+```mermaid
+flowchart LR
+    I[Internet\n203.0.113.10]
+    F[Firewall / NAT]
+    S[FRP server\n192.0.2.50]
+
+    I -->|8443| F -->|443| S
+    I -->|9443| F -->|6099| S
+    I -->|6000-6098| F -->|same ports| S
+```
+
+Clients must use the **public** control/enrollment endpoints, not the server's private address. See [Firewall & NAT](/deployment/firewall-nat).
 
 ## Install the current stable release
 
-The current published stable release is **v2.1.2**. Use the immutable release tag rather than mutable `main` for field installations.
+Current published stable: **v2.1.2**.
 
 ```bash
 curl -fsSL \
@@ -23,21 +70,25 @@ curl -fsSL \
   | sudo bash
 ```
 
-The interactive installer asks for the public endpoint, optional public hostname, internal server IP, deployment mode, and port settings.
+Use the immutable stable tag for field installs rather than mutable `main` unless you intentionally want development behavior.
 
-## Direct mode defaults
+## What the installer asks for
 
-For the default Direct deployment, the usual public TCP endpoints are:
+Expect questions about:
 
-```text
-443         FRP control
-6099        Enrollment / management HTTPS
-6000-6098   Published client services
-```
+1. public IP / public control endpoint
+2. optional public service hostname
+3. internal server IP
+4. Direct vs Enterprise single-443
+5. public and local control ports
+6. public and local enrollment/allocator ports
+7. published service range
 
-TCP/22 is optional and is only for your own administrative SSH access to the FRP server.
+<Warning>
+  The installer does **not** create AWS Security Groups, OCI Security Lists, external firewall/NAT rules, UFW/firewalld/iptables policy, or DNS records.
+</Warning>
 
-## Verify the installation
+## Verify immediately after installation
 
 ```bash
 sudo frpctl show version
@@ -45,11 +96,9 @@ sudo frpctl show status
 sudo frpctl doctor
 ```
 
-`doctor` is read-only. It checks installation state, configuration, PKI, service state, registry consistency, topology, and common network problems without changing state.
+`doctor` is read-only and checks installation state, permissions, PKI, service state, registry consistency, topology, and common network problems.
 
-## Important state
-
-Server state is intentionally persistent across normal reinstall/update workflows. Important locations include:
+## Persistent state you should understand
 
 ```text
 /etc/frp-auto-deploy/config.json
@@ -58,11 +107,19 @@ Server state is intentionally persistent across normal reinstall/update workflow
 /var/lib/frp-auto-deploy/registry.json
 ```
 
-Do not manually edit registry or identity state during normal operations.
+These files/state protect trust, identity, and public-port reservations. Do not manually edit them during normal operation.
+
+## Server readiness checklist
+
+- required systemd services are active
+- `frpctl doctor` has no blocking finding
+- public control/enrollment endpoints are reachable from the client network
+- published service range is allowed by the server-side firewall/NAT
+- if using DNS, the public hostname resolves to the correct public entry point
 
 ## Next
 
 - [Quick Start](/getting-started/quickstart)
 - [Deployment Modes](/deployment/modes)
 - [Firewall & NAT](/deployment/firewall-nat)
-- [Client Enrollment](/guides/enrollment)
+- [Network Ports](/reference/network-ports)

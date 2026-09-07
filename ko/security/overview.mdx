@@ -5,37 +5,113 @@ description: "등록 신뢰, CLIENT ID, credential과 관리 경계를 이해합
 
 # 보안 개요
 
-FRP Auto Deploy의 관리 plane은 **HTTPS only**를 기준으로 하고 실패 시 보수적으로 동작하도록 설계되어 있습니다.
+FRP Auto Deploy는 **FRP tunnel authentication**과 **management-plane trust**를 분리합니다. 문제 해결이나 보안 검토에서 두 자격 증명을 혼동하지 않는 것이 중요합니다.
 
-## 핵심 원칙
+## 한눈에 보는 보안 모델
 
-- FRP control/data 터널 인증과 관리 API 자격 증명은 서로 다른 역할입니다.
-- 최초 등록은 Enrollment Code 또는 Bootstrap Ticket을 사용합니다.
-- 등록 후 클라이언트는 persistent management identity를 사용합니다.
-- CLIENT ID는 hostname/IP와 분리된 식별자입니다.
-- Zero-Touch 명령은 사용/만료/취소 전까지 민감하게 취급합니다.
-- `show`, help, Tab completion, 일반 status 화면은 enrollment secret을 노출하지 않아야 합니다.
+```mermaid
+flowchart TB
+    subgraph TUNNEL[FRP tunnel plane]
+      FT[FRP token]
+      FC[FRP native TLS 또는 WSS]
+    end
 
-## Private CA
+    subgraph MGMT[Enrollment / management plane]
+      EC[Enrollment Code / Bootstrap Ticket]
+      CA[Project private CA]
+      MI[Persistent client management identity]
+    end
 
-서버는 프로젝트용 private CA를 유지합니다. 클라이언트는 최초 등록 과정에서 전달된 CA SHA256 fingerprint를 검증하고 이후 관리 통신에서 저장된 CA를 사용합니다.
+    EC --> CA --> MI
+    FT --> FC
+```
 
-## FRP token
+FRP token은 Enrollment Code, Bootstrap Ticket, management API credential과 같은 것이 아닙니다.
 
-FRP token은 FRP tunnel 인증용입니다. Enrollment Code나 management API credential과 같은 것이 아닙니다.
+## 최초 신뢰 수립
 
-## 운영자가 보호해야 하는 것
+```mermaid
+sequenceDiagram
+    participant C as 새 Client
+    participant S as Server
 
-- 서버 private CA key
-- FRP server token
-- 유효한 Enrollment Code / Zero-Touch ticket
-- 클라이언트 management private key
-- 서버 registry 및 신뢰 상태 백업
+    C->>S: Short-lived enrollment credential
+    S-->>C: CA bootstrap / expected trust material
+    C->>C: CA fingerprint + certificate 검증
+    C->>S: Verified HTTPS enrollment
+    S-->>C: Persistent ECDSA management identity + config
+    C->>S: 이후 signed management request
+```
 
-## 책임 경계
+Enrollment와 signed client management는 verified HTTPS를 사용하며 production plain-HTTP fallback은 지원하지 않습니다.
 
-서버 또는 클라이언트의 local root가 완전히 침해된 상황은 보호 경계 밖입니다. 파일 권한과 credential 분리는 우발적 노출과 일반적인 원격 공격 표면을 줄이지만 root compromise 자체를 해결하지는 않습니다.
+## FRP tunnel plane
+
+- Direct: FRP native TLS control
+- Enterprise single-443: FRP control over WSS
+- FRP token: tunnel authentication
+- Published service traffic: proxy 등록 후 FRP를 통해 전달
+
+## Persistent management identity
+
+Enrollment 후 Client는 persistent ECDSA P-256 management identity를 유지하고 private key는 Client에 남습니다.
+
+Signed management request는 freshness/replay protection을 위해 timestamp/nonce 등의 검증과 결합됩니다.
+
+## Zero-Touch credential 특성
+
+Bootstrap Ticket은 다음 특성을 목표로 합니다.
+
+- high entropy
+- short-lived
+- first-machine bound
+- successful enrollment 후 single-use
+- server에서 hashed-at-rest
+- 사용/만료/revoke 전까지 민감 정보
+
+Generated bootstrap command를 public issue, public chat, analytics, long-lived log에 남기지 마세요.
+
+## 보호해야 할 Secret
+
+| Secret | 역할 |
+| --- | --- |
+| FRP server token | FRP tunnel client 인증 |
+| Enrollment Code | Manual first enrollment |
+| Bootstrap Ticket | Zero-Touch first enrollment |
+| Client management private key | Persistent management identity |
+| Management MAC material | Management request authentication |
+| CA private key | Project management trust root |
+| TLS private key | 해당 TLS endpoint identity |
+| Token 포함 generated FRP config | Tunnel credential 노출 가능 |
+
+## 보안 경계
+
+```mermaid
+flowchart LR
+    P[제품이 다루는 영역] --> A[Enrollment trust]
+    P --> B[Credential separation]
+    P --> C[Identity consistency]
+    P --> D[Fail-closed management]
+
+    O[제품 외부 경계] --> E[Compromised local root]
+    O --> F[External firewall policy]
+    O --> G[DNS provider]
+    O --> H[SSH account/key policy]
+    O --> I[Application auth/TLS]
+```
+
+Server나 Client의 local root가 완전히 침해된 상황은 제품 보호 경계 밖입니다.
+
+## Fail closed
+
+Unknown identity, invalid signature, CA mismatch, registry inconsistency, ambiguous client selector 같은 상태에서는 추측해서 계속 진행하지 않고 실패하는 것이 원칙입니다.
 
 <Warning>
-운영 문제를 해결하기 위해 TLS 검증을 끄거나 `curl -k`를 정상 설치/운영 절차로 사용하지 마세요.
+Trust 문제를 `curl -k`, TLS verification disable, plain HTTP enrollment, Client 간 secret 복사로 해결하지 마세요.
 </Warning>
+
+## 관련 문서
+
+- [아키텍처](/ko/reference/architecture)
+- [Zero-Touch 등록](/ko/guides/zero-touch)
+- [문제 해결](/ko/operations/troubleshooting)

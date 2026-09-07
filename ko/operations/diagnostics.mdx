@@ -1,0 +1,58 @@
+---
+title: "진단 & Doctor"
+description: "Server와 Client 상태를 read-only로 확인하고 위험한 수동 수정 전에 evidence를 수집합니다."
+sidebarTitle: "진단 & Doctor"
+icon: "stethoscope"
+---
+
+# 진단 & Doctor
+
+문제가 생기면 **상태 확인 → doctor → network/target 확인 → 필요한 변경** 순서가 안전합니다.
+
+```mermaid
+flowchart LR
+    O[Observe] --> S[show status / info]
+    S --> D[doctor]
+    D --> N[Network + target 확인]
+    N --> C{State change 필요?}
+    C -->|아니오| E[Evidence 정리]
+    C -->|예| A[Documented operation 수행]
+    A --> V[다시 status + doctor + E2E 확인]
+```
+
+## Server
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl show clients
+sudo frpctl show enrollments
+sudo frpctl doctor
+```
+
+## Client
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl show services
+sudo frpctl show info
+sudo frpctl doctor
+```
+
+## Doctor가 확인하는 범주
+
+- 설치 상태와 expected files
+- secret file permission
+- PKI / CA trust
+- systemd service state
+- FRP config / transport
+- allocator/enrollment reachability
+- registry / client-state consistency
+- topology와 common network failure
+
+<Warning>
+  `frps.toml`, `frpc.toml`, registry, client identity, PKI 파일을 troubleshooting 첫 단계에서 직접 수정하지 마세요.
+</Warning>
+
+더 자세한 증상별 흐름은 [문제 해결](/ko/operations/troubleshooting)을 사용하세요.
