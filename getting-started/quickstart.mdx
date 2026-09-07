@@ -1,0 +1,92 @@
+---
+title: "Quick Start"
+description: "Install the server, enroll a client, and publish your first SSH service."
+---
+
+# Quick Start
+
+This guide uses the current stable release, **v2.1.2**.
+
+## 1. Install the server
+
+On a supported Linux server with a public entry point:
+
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+The interactive installer asks for the server public endpoint, optional public hostname, internal IP, deployment mode, and port settings.
+
+For the default Direct deployment, the usual public inbound TCP requirements are:
+
+```text
+443         FRP control
+6099        Enrollment / management HTTPS
+6000-6098   Published services
+```
+
+FRP Auto Deploy does not automatically change your external firewall, cloud security group, or NAT rules.
+
+## 2. Verify the server
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+`doctor` is read-only and is the preferred first diagnostic command.
+
+## 3. Create a Zero-Touch SSH enrollment
+
+On the server:
+
+```bash
+sudo frpctl create enrollment \
+  --one-line \
+  --ssh \
+  --ssh-user aella \
+  --label branch-a
+```
+
+Replace `aella` with an SSH user that already exists on the remote client.
+
+FRP Auto Deploy does not create OS users, install an SSH server, change passwords, or manage SSH keys.
+
+The server prints a one-time bootstrap command. Send that command securely to the remote operator and run it once on the client.
+
+## 4. Confirm registration
+
+Back on the server:
+
+```bash
+sudo frpctl show clients
+sudo frpctl show enrollments
+```
+
+The enrolled machine receives a persistent CLIENT ID and its published SSH service receives an assigned public port.
+
+## 5. Connect
+
+Example:
+
+```bash
+ssh -p <public-port> aella@<FRP-server-public-IP>
+```
+
+If you have configured an optional published-service hostname, you can use it instead of the IP:
+
+```bash
+ssh -p <public-port> aella@fw.example.com
+```
+
+The IP remains the infrastructure fallback.
+
+## Next steps
+
+- [Deployment Modes](/deployment/modes)
+- [Client Enrollment](/guides/enrollment)
+- [Publishing Services](/guides/services)
+- [`frpctl` Guide](/frpctl/overview)
