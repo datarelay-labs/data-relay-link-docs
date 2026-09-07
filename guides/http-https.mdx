@@ -1,0 +1,58 @@
+---
+title: "HTTP & HTTPS"
+description: "Publish HTTP and HTTPS applications through FRP Auto Deploy using TCP forwarding."
+---
+
+# HTTP & HTTPS
+
+FRP Auto Deploy represents HTTP and HTTPS applications as TCP services. It does not act as an application reverse proxy for published services.
+
+## HTTP
+
+Example local target:
+
+```text
+127.0.0.1:80
+```
+
+Example LAN target reachable from the FRP client:
+
+```text
+10.10.20.40:80
+```
+
+Users connect to the FRP server's assigned public service port.
+
+## HTTPS
+
+Example target:
+
+```text
+127.0.0.1:443
+```
+
+HTTPS is **TCP passthrough**. FRP Auto Deploy does not terminate, replace, or automatically issue the target application's TLS certificate.
+
+If users access the application through a DNS hostname, the application behind the tunnel must present a certificate that is valid for the hostname users actually enter.
+
+## Hostname example
+
+Suppose the service is published on port `6005` and the public service hostname is `fw.example.com`:
+
+```text
+https://fw.example.com:6005
+```
+
+The target HTTPS server must be prepared for that TLS hostname where applicable.
+
+## Multiple web services on one client
+
+A single client can publish several applications, each with its own Service ID and persistent public port:
+
+```text
+web-admin   -> 127.0.0.1:443
+api         -> 127.0.0.1:8080
+lan-ui      -> 10.10.20.50:8443
+```
+
+Use stable Service IDs so lifecycle operations remain unambiguous.
