@@ -1,0 +1,120 @@
+---
+title: "frpctl Guide"
+description: "Use the primary operator CLI for clients, services, enrollment, diagnostics, and lifecycle operations."
+---
+
+# frpctl Guide
+
+`frpctl` is the primary day-to-day operator interface.
+
+Start the interactive CLI with:
+
+```bash
+sudo frpctl
+```
+
+The canonical grammar is:
+
+```text
+<verb> <resource> [target] [property] [value]
+```
+
+## Common show commands
+
+```text
+show status
+show version
+show clients
+show client <ID>
+show client <ID> services
+show client <ID> tags
+show enrollments
+show audit
+show upstream
+show services
+show info
+```
+
+The canonical client selector is **CLIENT ID**. Labels and hostnames are display metadata and may change without changing identity.
+
+## Client metadata
+
+```text
+set client <ID> label <value>
+set client <ID> note <value>
+set client <ID> tag <key> <value>
+
+unset client <ID> label
+unset client <ID> note
+unset client <ID> tag <key>
+```
+
+## Server hostname
+
+```text
+set server hostname <fqdn>
+unset server hostname
+```
+
+This sets an optional published-service DNS alias. It does not change client identity, public ports, the CA, or FRP control identity.
+
+## Service changes on a client
+
+```text
+add service [--preset ssh|http|https|custom] ...
+set service <service-id> target-host <host>
+set service <service-id> target-port <port>
+set service <service-id> ssh-user <user>
+set service <service-id> name <value>
+
+enable service <service-id>
+disable service <service-id>
+apply
+discard
+```
+
+Service IDs are stable. Pending service edits become live after `apply`.
+
+## Lifecycle operations
+
+```text
+revoke client <ID>
+revoke enrollment <ID>
+purge enrollment <ID>
+release service <ID> <service-id>
+release client <ID>
+```
+
+Remember:
+
+```text
+revoke != release
+disable != release
+```
+
+## Update, backup, restore, and diagnostics
+
+```text
+update project [--check]
+update frp [--check]
+create backup [path]
+restore backup <path>
+doctor
+```
+
+`doctor` is read-only.
+
+## Interactive help
+
+```text
+Tab
+?
+help
+help show
+help set client
+history
+clear
+exit
+```
+
+Session history is not persisted to disk by `frpctl`.
