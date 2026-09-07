@@ -94,6 +94,7 @@
               "reference/platforms",
               "reference/network-ports",
               "reference/release-status",
+              "reference/glossary",
               "reference/limitations"
             ]
           }
@@ -106,6 +107,7 @@
             "group": "시작하기",
             "pages": [
               "ko/index",
+              "ko/getting-started/concepts",
               "ko/getting-started/quickstart",
               "ko/getting-started/server-installation",
               "ko/getting-started/linux-client"
