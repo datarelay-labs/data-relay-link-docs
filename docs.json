@@ -128,7 +128,9 @@
           },
           {
             "group": "운영 & 문제 해결",
-            "pages": []
+            "pages": [
+              "ko/operations/troubleshooting"
+            ]
           },
           {
             "group": "보안 & 참고",
