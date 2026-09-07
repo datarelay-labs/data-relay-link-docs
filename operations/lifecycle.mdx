@@ -1,0 +1,49 @@
+---
+title: "Lifecycle Semantics"
+description: "Understand disable, revoke, release, uninstall, purge, and update before changing client or port state."
+---
+
+# Lifecycle Semantics
+
+FRP Auto Deploy deliberately separates temporary publication changes, identity revocation, and permanent public-port release.
+
+```text
+disable   != release
+revoke    != release
+uninstall != release
+uninstall != purge
+update    != re-enrollment
+```
+
+## Service lifecycle
+
+| Action | Effect | Public port |
+| --- | --- | --- |
+| Disable service | Stop publication temporarily | Kept |
+| Enable service | Resume publication | Same port reused |
+| Edit + apply | Change target/name/config | Kept when possible |
+| Release service | Remove reservation | Returned to pool |
+
+## Client lifecycle
+
+`revoke client` blocks the client's management identity but does not automatically return its public service ports.
+
+`release client` removes the server-side client record and returns its service-port reservations.
+
+There is intentionally no ambiguous `delete client` command.
+
+## Enrollment lifecycle
+
+`revoke enrollment` blocks an active pending/bound credential.
+
+`purge enrollment` removes terminal enrollment metadata after the enrollment is expired, completed, or revoked.
+
+## Uninstall
+
+Client uninstall is local-only. It removes local client state but does not contact the server to free reservations.
+
+Server uninstall preserves core persistent state. Destructive purge is a separate decommission/test action.
+
+## Safe rule
+
+If the goal is only to stop a service temporarily, **disable** it. If the goal is to permanently return the public port, **release** it. If the goal is to block a management identity, **revoke** it.
