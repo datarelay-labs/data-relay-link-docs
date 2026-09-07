@@ -1,0 +1,48 @@
+---
+title: "Custom TCP & LAN Targets"
+description: "Publish arbitrary TCP services and services hosted on other LAN systems reachable from the FRP client."
+---
+
+# Custom TCP & LAN Targets
+
+FRP Auto Deploy can publish arbitrary TCP services, not only SSH or web services.
+
+## Custom TCP examples
+
+```text
+Grafana       127.0.0.1:3000
+API           127.0.0.1:8080
+PostgreSQL    10.10.30.30:5432
+Appliance UI  10.10.40.50:8443
+```
+
+Create a stable Service ID and set the target host and target port.
+
+## Use the client as a small LAN gateway
+
+The application does not have to run on the FRP client itself.
+
+```text
+Internet
+   |
+FRP Server
+   |
+outbound FRP tunnel
+   |
+FRP Client
+   +-- 10.10.20.30:22
+   +-- 10.10.20.40:80
+   +-- 10.10.20.50:443
+```
+
+The FRP client only needs normal IP reachability to those targets.
+
+## Security responsibility
+
+Publishing a TCP port makes that service reachable through the assigned public endpoint. Keep the target application's own authentication and access controls enabled.
+
+FRP Auto Deploy does not automatically configure application authentication, host firewalls, database ACLs, or network segmentation.
+
+## Persistent public ports
+
+Each service receives a public port reservation. Normal target edits and disable/enable operations are designed to preserve that reservation. Use `release service` only when you intend to return the public port to the pool.
