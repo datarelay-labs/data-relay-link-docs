@@ -42,6 +42,7 @@
               "index",
               "getting-started/overview",
               "getting-started/concepts",
+              "getting-started/oci-free-tier-server",
               "getting-started/quickstart",
               "getting-started/server-installation",
               "getting-started/linux-client"
@@ -112,6 +113,7 @@
             "pages": [
               "ko/index",
               "ko/getting-started/concepts",
+              "ko/getting-started/oci-free-tier-server",
               "ko/getting-started/quickstart",
               "ko/getting-started/server-installation",
               "ko/getting-started/linux-client"
