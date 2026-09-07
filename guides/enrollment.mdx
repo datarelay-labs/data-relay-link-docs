@@ -1,0 +1,75 @@
+---
+title: "Client Enrollment"
+description: "Enroll remote clients with Zero-Touch or a manual Enrollment Code."
+---
+
+# Client Enrollment
+
+FRP Auto Deploy supports two normal first-install workflows.
+
+## Zero-Touch enrollment
+
+Zero-Touch is the recommended workflow when the server operator wants to define the initial client profile and send the remote user one command to run.
+
+Example on the server:
+
+```bash
+sudo frpctl create enrollment \
+  --one-line \
+  --ssh \
+  --ssh-user aella \
+  --label branch-a
+```
+
+The generated bootstrap credential is short-lived and sensitive. Send the complete generated command only through an appropriate private channel.
+
+The SSH user must already exist on the remote system. FRP Auto Deploy does not create users, enable SSH, change passwords, or install SSH keys.
+
+After the client completes enrollment:
+
+```bash
+sudo frpctl show clients
+sudo frpctl show enrollments
+```
+
+## Manual Enrollment Code
+
+Use manual enrollment when the person installing the client should choose services interactively.
+
+On the server:
+
+```bash
+sudo frpctl create enrollment
+```
+
+The server generates an Enrollment ID, short-lived Enrollment Code, allocator URL, CA fingerprint, and a client bootstrap command.
+
+The remote user runs the generated install command and enters the Enrollment Code when prompted.
+
+Typical service menu:
+
+```text
+1) SSH
+2) HTTP
+3) HTTPS
+4) Custom TCP
+5) Back
+```
+
+The server assigns external public service ports. The client installer chooses the target host and target port.
+
+## Persistent identity
+
+Enrollment establishes a persistent management identity. Normal service edits, reboots, and supported software updates do not require re-enrollment.
+
+## Enrollment lifecycle
+
+Use:
+
+```bash
+sudo frpctl show enrollments
+sudo frpctl revoke enrollment <ID>
+sudo frpctl purge enrollment <ID>
+```
+
+`revoke` blocks an active credential. `purge` removes terminal enrollment metadata; they are intentionally different operations.
