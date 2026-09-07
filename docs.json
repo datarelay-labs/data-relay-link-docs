@@ -90,6 +90,7 @@
             "group": "Security & Reference",
             "pages": [
               "security/overview",
+              "reference/architecture",
               "reference/platforms",
               "reference/network-ports",
               "reference/release-status",
