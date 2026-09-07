@@ -1,0 +1,80 @@
+---
+title: "Troubleshooting"
+description: "A practical first-response checklist for enrollment, tunnel, service, and DNS problems."
+---
+
+# Troubleshooting
+
+Start with the product's read-only diagnostics before changing files manually.
+
+## 1. Check status
+
+```bash
+sudo frpctl show status
+sudo frpctl show version
+sudo frpctl doctor
+```
+
+## 2. Check client registration
+
+On the server:
+
+```bash
+sudo frpctl show clients
+sudo frpctl show enrollments
+```
+
+If a new machine is missing, confirm that the enrollment credential is still valid and that the client can reach the configured enrollment HTTPS endpoint.
+
+## 3. Check the network path
+
+For Direct mode, normally verify public inbound TCP reachability for:
+
+```text
+443
+6099
+6000-6098 as required
+```
+
+For Enterprise single-443:
+
+```text
+443
+6000-6098 as required
+```
+
+Remember that FRP Auto Deploy does not automatically modify cloud security groups, external firewalls, NAT, UFW, firewalld, or iptables.
+
+## 4. TCP works but TLS fails or resets
+
+Some enterprise networks allow the TCP connection but reset TLS on non-standard ports. Do not work around this by disabling TLS verification or using plain HTTP.
+
+If that network behavior is confirmed, review [Enterprise single-443](/deployment/modes).
+
+## 5. Published service is unreachable
+
+Confirm all layers:
+
+```text
+Internet user
+  -> server public service port
+  -> FRP tunnel
+  -> client
+  -> target host:target port
+```
+
+If the client publishes a LAN target, verify that the client itself can reach that target.
+
+## 6. DNS hostname does not work
+
+Check that the external DNS record resolves to the correct public entry point. FRP Auto Deploy consumes the hostname but does not create DNS records.
+
+For clients on the same LAN, also consider hairpin NAT or split DNS.
+
+## 7. HTTPS certificate warning
+
+Published HTTPS is TCP passthrough. The certificate comes from the target application, not FRP Auto Deploy. The target certificate must cover the hostname users connect to.
+
+## Avoid unsafe shortcuts
+
+Do not fix trust problems with `curl -k`, plain HTTP enrollment, manual secret copying, or ad-hoc edits to the registry and identity files.
