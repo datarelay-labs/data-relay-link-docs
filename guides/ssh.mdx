@@ -1,0 +1,66 @@
+---
+title: "SSH"
+description: "Publish SSH through FRP Auto Deploy and connect using the assigned public service port."
+---
+
+# SSH
+
+SSH is the most common FRP Auto Deploy service.
+
+## Target the client's own SSH service
+
+Typical target:
+
+```text
+127.0.0.1:22
+```
+
+During enrollment, specify an SSH user that already exists on the client. FRP Auto Deploy does not create the account or manage its password or SSH keys.
+
+## Connect through the FRP server
+
+After enrollment, the SSH service receives a persistent public port.
+
+```bash
+ssh -p <public-port> <ssh-user>@<server-public-IP>
+```
+
+If a published-service hostname is configured, you can use it instead of the IP:
+
+```bash
+ssh -p <public-port> <ssh-user>@fw.example.com
+```
+
+The public hostname is an access alias. It does not change the client's CLIENT ID or service reservation.
+
+## Publish SSH on another LAN host
+
+The FRP client can also act as a small gateway:
+
+```text
+Target host : 10.10.20.30
+Target port : 22
+SSH user    : admin
+```
+
+The FRP client only needs normal network reachability to that LAN target.
+
+## Check the service
+
+On the client:
+
+```bash
+sudo frpctl show services
+sudo frpctl show info
+sudo frpctl doctor
+```
+
+On the server:
+
+```bash
+sudo frpctl show client <CLIENT-ID> services
+```
+
+## Disable vs release
+
+Disabling SSH stops publication but keeps the assigned public port reserved. Re-enabling reuses the same port. Releasing the service returns that port to the pool.
