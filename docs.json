@@ -112,6 +112,7 @@
             "pages": [
               "ko/index",
               "ko/getting-started/concepts",
+              "ko/getting-started/oci-free-tier-server",
               "ko/getting-started/quickstart",
               "ko/getting-started/server-installation",
               "ko/getting-started/linux-client"
