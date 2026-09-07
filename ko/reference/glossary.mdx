@@ -1,0 +1,38 @@
+---
+title: "용어집"
+description: "FRP Auto Deploy에서 자주 사용하는 용어를 쉬운 말로 정리합니다."
+sidebarTitle: "용어집"
+icon: "book-open"
+---
+
+# 용어집
+
+| 용어 | 의미 |
+| --- | --- |
+| **FRP** | 이 프로젝트가 사용하는 공식 `fatedier/frp` reverse proxy/tunnel 엔진 |
+| **Server** | `frps`와 enrollment/management layer가 실행되는 Linux 공인 진입점 |
+| **Client** | 보통 NAT/방화벽 뒤에서 `frpc`를 실행하는 원격 장비 |
+| **CLIENT ID** | 서버가 관리 기준으로 사용하는 변경되지 않는 장비 identity |
+| **Label** | 사람이 보기 쉬운 이름. 바꿔도 CLIENT ID는 바뀌지 않음 |
+| **Service** | 외부에 게시하는 TCP target 하나 |
+| **Service ID** | `ssh`, `web-admin` 같은 stable 서비스 식별자 |
+| **Target host/port** | 클라이언트가 최종적으로 연결할 `127.0.0.1:22` 또는 `10.10.20.30:443` 같은 주소 |
+| **Public service port** | 인터넷 사용자가 접속하는 FRP 서버의 공개 TCP 포트. persistent reservation으로 취급 |
+| **Enrollment** | 새 클라이언트를 서버와 안전하게 최초 등록하는 과정 |
+| **Enrollment Code** | 수동 등록 시 사용하는 단기 secret |
+| **Bootstrap Ticket** | Zero-Touch에서 사용하는 단기 secret |
+| **Zero-Touch** | 서버가 프로필을 준비하고 원격 사용자는 생성된 한 줄 명령만 실행하는 등록 방식 |
+| **Allocator** | Enrollment/management HTTPS와 서비스 포트 할당을 담당하는 서버 구성요소 |
+| **Project private CA** | 관리 HTTPS 신뢰를 수립/검증하기 위해 프로젝트가 유지하는 CA |
+| **FRP token** | FRP tunnel 인증용 credential. enrollment credential과 별개 |
+| **Direct** | FRP control과 enrollment HTTPS를 별도 public endpoint로 운영하는 기본 모드 |
+| **single-443** | Enrollment HTTPS와 FRP control/WSS를 public TCP/443으로 통합하는 모드 |
+| **Public hostname** | 게시 서비스 접속에 사용할 수 있는 선택적 DNS 별칭 |
+| **Disable** | 서비스를 잠시 중지하지만 public-port 예약은 유지 |
+| **Release** | public-port 예약을 pool로 반환 |
+| **Revoke** | management identity 또는 active enrollment credential을 차단 |
+| **Doctor** | 설치/신뢰/상태/서비스/네트워크를 읽기 전용으로 검사하는 `frpctl` 진단 |
+
+<Note>
+  가장 자주 혼동되는 것은 **CLIENT ID와 label/hostname**, **disable과 release**, **FRP token과 enrollment/management credential**입니다.
+</Note>
