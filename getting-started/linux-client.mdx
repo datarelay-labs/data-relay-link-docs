@@ -1,0 +1,67 @@
+---
+title: "Linux Client"
+description: "Enroll and verify a Linux/systemd client using the current stable workflow."
+---
+
+# Linux Client
+
+Linux/systemd is the current stable client scope for FRP Auto Deploy.
+
+## Recommended: Zero-Touch
+
+On the FRP Auto Deploy server, create a one-time enrollment command:
+
+```bash
+sudo frpctl create enrollment \
+  --one-line \
+  --ssh \
+  --ssh-user aella \
+  --label branch-a
+```
+
+Replace `aella` with an SSH account that already exists on the target Linux machine.
+
+Run the exact generated command on the client. Do not reconstruct the bootstrap command manually.
+
+## Manual enrollment
+
+If the person installing the client should choose services interactively, create a normal enrollment on the server:
+
+```bash
+sudo frpctl create enrollment
+```
+
+Run the generated client bootstrap command and enter the short-lived Enrollment Code when prompted.
+
+## Verify on the client
+
+```bash
+sudo frpctl show status
+sudo frpctl show services
+sudo frpctl show info
+sudo frpctl doctor
+```
+
+`doctor` is read-only and should be the first diagnostic command when enrollment or tunnel behavior is unclear.
+
+## Verify on the server
+
+```bash
+sudo frpctl show clients
+sudo frpctl show enrollments
+```
+
+The client receives a persistent CLIENT ID. Normal reboots, supported service edits, and normal project updates do not require a new enrollment.
+
+## What Zero-Touch does not do
+
+FRP Auto Deploy does not automatically:
+
+- create Linux users
+- install or enable `sshd`
+- set passwords
+- create SSH keys
+- modify `authorized_keys`
+- modify external firewalls or NAT
+
+Prepare those prerequisites separately when the published service depends on them.
