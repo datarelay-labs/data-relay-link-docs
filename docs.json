@@ -102,12 +102,17 @@
             "group": "시작하기",
             "pages": [
               "ko/index",
-              "ko/getting-started/quickstart"
+              "ko/getting-started/quickstart",
+              "ko/getting-started/server-installation",
+              "ko/getting-started/linux-client"
             ]
           },
           {
             "group": "클라이언트 & 서비스",
-            "pages": []
+            "pages": [
+              "ko/guides/zero-touch",
+              "ko/guides/services"
+            ]
           },
           {
             "group": "frpctl",
