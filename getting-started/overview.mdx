@@ -1,0 +1,86 @@
+---
+title: "What is FRP Auto Deploy?"
+description: "Understand the problem FRP Auto Deploy solves and the operating model."
+---
+
+# What is FRP Auto Deploy?
+
+FRP Auto Deploy is a **lightweight deployment and operations layer for official FRP**. It is designed for small remote-access environments where a few systems to a few dozen systems need to be reached safely from outside a private network.
+
+It does not fork or modify FRP. FRP remains the tunnel engine; FRP Auto Deploy adds the operational layer around it.
+
+## The problem
+
+A server inside a customer, partner, branch, or lab network often looks like this:
+
+```text
+Internet
+   |
+Firewall / NAT
+   |
+Private network
+   |
+Linux server
+```
+
+Traditional remote support can require VPN accounts, firewall changes, NAT rules, bastion hosts, or manual FRP configuration. That is often too much work for temporary support or small environments.
+
+## The FRP Auto Deploy model
+
+A public FRP Auto Deploy server is installed once. Remote clients initiate outbound connectivity to it.
+
+```text
+Operator
+   |
+   v
+FRP Auto Deploy Server
+   ^
+   | outbound tunnel
+   |
+Remote Client behind NAT
+   |
+   +-- 127.0.0.1:22
+   +-- 127.0.0.1:443
+   +-- 10.10.20.30:22
+   +-- 10.10.20.40:80
+```
+
+A client can publish its own local services or act as a small gateway for services on LAN hosts it can reach.
+
+## What the product manages
+
+- Server and client installation
+- Secure enrollment
+- Persistent client identity
+- Multiple services per client
+- Persistent public TCP port reservations
+- Zero-Touch bootstrap
+- Client inventory and metadata
+- Day-to-day operations through `frpctl`
+- Backup and restore
+- Diagnostics with `doctor`
+- Audit and release-safe lifecycle controls
+
+## What it does not manage
+
+FRP Auto Deploy intentionally does **not** automatically configure:
+
+- Cloud security groups
+- External firewalls or NAT rules
+- UFW, firewalld, or iptables
+- DNS provider records
+- SSH accounts, passwords, or SSH keys
+- Application TLS certificates
+
+This boundary keeps the product lightweight and predictable.
+
+## Supported service model
+
+The normal service types are:
+
+- SSH
+- HTTP
+- HTTPS passthrough
+- Custom TCP
+
+All of these are ultimately published as TCP services through FRP.
