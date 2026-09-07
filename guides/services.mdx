@@ -1,0 +1,86 @@
+---
+title: "Publishing Services"
+description: "Publish SSH, HTTP, HTTPS, custom TCP, and LAN services through an enrolled client."
+---
+
+# Publishing Services
+
+One enrolled client can publish one or many TCP services.
+
+## SSH
+
+Typical target:
+
+```text
+127.0.0.1:22
+```
+
+The server assigns a persistent public service port. Connect with:
+
+```bash
+ssh -p <public-port> user@<server-public-IP-or-hostname>
+```
+
+## HTTP
+
+Publish an HTTP service such as:
+
+```text
+127.0.0.1:80
+```
+
+or another host reachable from the client:
+
+```text
+10.10.20.40:80
+```
+
+## HTTPS
+
+HTTPS is TCP passthrough. FRP Auto Deploy does not terminate or replace the target application's TLS certificate.
+
+Example target:
+
+```text
+127.0.0.1:443
+```
+
+If users connect with a DNS hostname, the target application's certificate must be valid for that hostname.
+
+## Custom TCP
+
+Any required TCP service can be represented with a target host and port, for example:
+
+```text
+Grafana      127.0.0.1:3000
+API          127.0.0.1:8080
+Appliance    10.10.20.50:8443
+```
+
+## Use a client as a LAN gateway
+
+The service does not have to run on the FRP client itself.
+
+Example:
+
+```text
+FRP Client
+  +-- 10.10.20.30:22
+  +-- 10.10.20.40:80
+  +-- 10.10.20.50:443
+```
+
+The client only needs normal network reachability to those targets.
+
+## Service lifecycle
+
+The public port is treated as a persistent reservation.
+
+```text
+Disable  -> publication stops, public port stays reserved
+Enable   -> publication resumes on the same public port
+Edit     -> target can change while the public port stays the same
+Release  -> reservation is returned to the port pool
+```
+
+Do not confuse `disable`, `release`, and client `revoke`; they intentionally have different meanings.
