@@ -5,17 +5,58 @@ description: "FRP Auto Deploy 서버를 설치하기 전에 필요한 네트워�
 
 # 서버 설치
 
-## 설치 전 체크리스트
+FRP Auto Deploy 서버는 인터넷의 공인 진입점입니다. 공식 `frps`와 enrollment/registry/lifecycle/`frpctl` 관리 계층이 함께 동작합니다.
 
-다음 항목을 먼저 준비하세요.
+## 처음이라면 권장 환경
 
-- Linux/systemd 서버
-- 인터넷에서 도달 가능한 공인 진입점
-- Direct 기본 구성이라면 TCP `443`, `6099`, `6000-6098`
-- 서버가 NAT 뒤라면 외부 방화벽의 DNAT 규칙
-- 선택 사항: 게시 서비스용 DNS hostname
+가장 이해하기 쉬운 첫 구성은 **Ubuntu 24.04 x86_64 + 직접 공인 IP**입니다. Ubuntu 22.04/24.04는 stable 문서에서 가장 명확한 real-VM baseline입니다.
 
-<Warning>FRP Auto Deploy는 클라우드 보안 그룹, 외부 방화벽, NAT 규칙을 자동 생성하지 않습니다.</Warning>
+다른 Linux 계열은 validation level이 다르므로 [지원 플랫폼 & 제한](/ko/reference/platforms)을 확인하세요.
+
+## 먼저 토폴로지를 고르세요
+
+```mermaid
+flowchart TD
+    A[시작] --> B{서버가 인터넷 트래픽을\n직접 받을 수 있나요?}
+    B -->|직접 공인 IP| C[Direct 기본 구성]
+    B -->|외부 Firewall/NAT 뒤| D[DNAT 규칙 준비]
+    C --> E{클라이언트 네트워크가\nTLS를 사실상 443만 허용하나요?}
+    D --> E
+    E -->|아니오| F[Direct]
+    E -->|예 / non-443 TLS reset| G[Enterprise single-443 고려]
+```
+
+<Note>
+  NAT는 세 번째 배포 모드가 아닙니다. 제품 배포 모드는 **Direct**와 **Enterprise single-443** 두 가지입니다.
+</Note>
+
+## Direct 기본 포트
+
+```mermaid
+flowchart LR
+    I[Internet]
+    S[FRP Auto Deploy Server]
+    I -->|TCP 443\nFRP control| S
+    I -->|TCP 6099\nEnrollment / management HTTPS| S
+    I -->|TCP 6000-6098\nPublished services| S
+```
+
+TCP/22는 서버 자체 관리 SSH용 선택 포트이며 FRP Auto Deploy의 tunnel 경로는 아닙니다.
+
+## 서버가 NAT 뒤인 경우
+
+```mermaid
+flowchart LR
+    I[Internet\n203.0.113.10]
+    F[Firewall / NAT]
+    S[FRP Server\n192.0.2.50]
+
+    I -->|8443| F -->|443| S
+    I -->|9443| F -->|6099| S
+    I -->|6000-6098| F -->|same ports| S
+```
+
+클라이언트에는 내부 `192.0.2.50`가 아니라 외부에서 보이는 public endpoint를 사용해야 합니다.
 
 ## Stable 버전 설치
 
@@ -25,21 +66,25 @@ curl -fsSL \
   | sudo bash
 ```
 
-인터랙티브 설치기는 공인 주소, 선택적 public hostname, 내부 IP, 배포 모드, control/enrollment/service 포트 등을 묻습니다.
+운영 설치에서는 mutable `main`보다 immutable stable tag를 사용하세요.
 
-## Direct vs single-443
+## 설치기가 묻는 항목
 
-**Direct**는 기본 모드입니다.
+대략 다음 순서의 정보가 필요합니다.
 
-```text
-TCP/443       FRP control
-TCP/6099      Enrollment / management HTTPS
-TCP/6000-6098 Published services
-```
+1. Public IP / control endpoint
+2. 선택적 public service hostname
+3. 내부 서버 IP
+4. Direct vs single-443
+5. Public/local control port
+6. Public/local enrollment/allocator port
+7. Published service port range
 
-**Enterprise single-443**는 FRP control과 enrollment를 TCP/443 프런트엔드로 통합해야 하는 네트워크에서 사용합니다. 게시 서비스 포트 `6000-6098`은 그대로 필요합니다.
+<Warning>
+  AWS Security Group, OCI Security List/NSG, 외부 방화벽/NAT, UFW/firewalld/iptables, DNS record는 자동 생성되지 않습니다.
+</Warning>
 
-## 설치 검증
+## 설치 직후 검증
 
 ```bash
 sudo frpctl show version
@@ -47,9 +92,9 @@ sudo frpctl show status
 sudo frpctl doctor
 ```
 
-정상이라면 필요한 systemd 서비스가 active이고 `doctor`가 심각한 구성 오류를 보고하지 않아야 합니다.
+`doctor`는 읽기 전용이며 설치 파일, 권한, PKI, 서비스 상태, registry, topology와 흔한 네트워크 문제를 확인합니다.
 
-## 보존해야 할 서버 상태
+## 보존해야 할 상태
 
 ```text
 /etc/frp-auto-deploy/config.json
@@ -58,7 +103,15 @@ sudo frpctl doctor
 /var/lib/frp-auto-deploy/registry.json
 ```
 
-이 상태는 CLIENT ID, 신뢰, 토큰, 공개 포트 예약을 유지하는 데 중요합니다. 일반 운영 중 직접 편집하지 마세요.
+일반 운영 중 이 상태를 직접 편집하지 마세요.
+
+## 서버 준비 완료 체크
+
+- 필요한 systemd 서비스가 active
+- `doctor`에 blocking 오류 없음
+- 클라이언트 네트워크에서 public control/enrollment endpoint 도달 가능
+- Published service range가 서버 측 firewall/NAT에서 허용
+- DNS 사용 시 hostname이 올바른 public entry point를 가리킴
 
 ## 다음
 

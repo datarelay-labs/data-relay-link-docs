@@ -1,56 +1,88 @@
 ---
-title: "Updates, Backup & Doctor"
-description: "Maintain FRP Auto Deploy safely without losing identity or persistent public ports."
+title: "Operations Overview"
+description: "Choose the correct safe workflow for updates, backup/restore, diagnostics, lifecycle changes, and troubleshooting."
+sidebarTitle: "Operations Overview"
+icon: "screwdriver-wrench"
 ---
 
-# Updates, Backup & Doctor
+# Operations Overview
 
-FRP Auto Deploy separates project updates from upstream FRP updates.
+Use this page as the operator map after deployment.
 
-## Project update
-
-```bash
-sudo frpctl update project --check
-sudo frpctl update project
+```mermaid
+flowchart TD
+    A[Need to operate or fix something] --> B{What is the goal?}
+    B -->|Check health| D[Diagnostics / doctor]
+    B -->|Install newer project build| U[Updates]
+    B -->|Protect or recover state| R[Backup & Restore]
+    B -->|Stop / remove / block something| L[Lifecycle Semantics]
+    B -->|Something is broken| T[Troubleshooting]
 ```
 
-Normal project updates are designed to preserve client identity, the private CA, the FRP token, the registry, and public port reservations.
+<CardGroup cols={2}>
+  <Card title="Diagnostics" icon="stethoscope" href="/operations/diagnostics">
+    Start with read-only status and `doctor` before changing generated state.
+  </Card>
 
-## FRP update
+  <Card title="Updates" icon="arrows-rotate" href="/operations/updates">
+    Update the project or pinned FRP without intentionally losing identity, CA, token, or ports.
+  </Card>
 
-```bash
-sudo frpctl update frp --check
-sudo frpctl update frp
+  <Card title="Backup & Restore" icon="box-archive" href="/operations/backup-restore">
+    Protect and recover trust, registry, configuration, and port reservations.
+  </Card>
+
+  <Card title="Lifecycle" icon="diagram-project" href="/operations/lifecycle">
+    Choose disable, revoke, release, uninstall, or another operation without confusing their effects.
+  </Card>
+
+  <Card title="Troubleshooting" icon="triangle-exclamation" href="/troubleshooting/overview">
+    Follow a symptom-driven decision tree for enrollment, tunnel, port, DNS, and certificate problems.
+  </Card>
+
+  <Card title="Release Status" icon="tag" href="/reference/release-status">
+    Distinguish stable v2.1.2 from the 2.1.3 development branch.
+  </Card>
+</CardGroup>
+
+## Safe operating sequence
+
+```mermaid
+flowchart LR
+    O[Observe] --> S[Show status / info]
+    S --> D[Run doctor]
+    D --> B{Need state change?}
+    B -->|No| E[Stop / collect evidence]
+    B -->|Yes| K[Create backup when appropriate]
+    K --> C[Make documented change]
+    C --> V[Verify status + doctor + service path]
 ```
 
-FRP is pinned and validated rather than automatically following the newest upstream version. The current stable project uses FRP **v0.70.1**.
+## State FRP Auto Deploy tries to preserve
 
-## Create a backup
+Normal supported updates and reboots are designed to preserve:
 
-```bash
-sudo frpctl create backup
+- CLIENT ID and management identity
+- project private CA
+- FRP token
+- server registry
+- service definitions
+- persistent public-port reservations
+
+## Avoid destructive debugging
+
+Do not begin troubleshooting by manually editing:
+
+```text
+/etc/frp/frps.toml
+/etc/frp/frpc.toml
+/var/lib/frp-auto-deploy/registry.json
+/etc/frp/client-state.json
+management identity / PKI files
 ```
 
-A server backup should protect the state required to preserve trust and reservations, including the project PKI, server token, configuration, and registry.
+Use `frpctl doctor` first and follow the documented lifecycle command for the actual intent.
 
-## Restore
-
-```bash
-sudo frpctl restore backup <path>
-```
-
-Restore is not treated as a blind file copy. The product validates the archive, restores state, restarts services, runs diagnostics, and is designed to fail safely when restoration cannot be completed consistently.
-
-## Doctor
-
-```bash
-sudo frpctl doctor
-```
-
-`doctor` is read-only. Use it before making manual configuration changes.
-
-It can help identify installation, PKI, permissions, runtime services, topology, allocator, FRP, registry consistency, and network problems.
-
-## Preserve state
-
-Avoid manually editing generated or authoritative state files such as the client registry, `client-state.json`, generated FRP configuration, or management identity files unless you are performing a documented recovery procedure.
+<Tip>
+  If you are unsure whether you mean **disable**, **revoke**, or **release**, read [Lifecycle Semantics](/operations/lifecycle) before executing the command.
+</Tip>

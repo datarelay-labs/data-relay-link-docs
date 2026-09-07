@@ -5,9 +5,21 @@ description: "Use frpctl status and doctor to diagnose server, client, PKI, regi
 
 # Diagnostics
 
-Start troubleshooting with read-only checks before making manual changes.
+The safest diagnostic pattern is **observe first, change later**.
 
-## Server checks
+```mermaid
+flowchart LR
+    O[Observe symptoms] --> S[show status / info]
+    S --> D[doctor]
+    D --> N[Verify public network path]
+    N --> T[Verify target locally from client]
+    T --> C{State change needed?}
+    C -->|No| E[Collect evidence]
+    C -->|Yes| A[Use documented lifecycle/config command]
+    A --> V[Verify again]
+```
+
+## Server baseline
 
 ```bash
 sudo frpctl show version
@@ -17,32 +29,79 @@ sudo frpctl show enrollments
 sudo frpctl doctor
 ```
 
-## Client checks
+## Client baseline
 
 ```bash
+sudo frpctl show version
 sudo frpctl show status
 sudo frpctl show services
 sudo frpctl show info
 sudo frpctl doctor
 ```
 
-## What `doctor` checks
+## What `doctor` can surface
 
-`doctor` is read-only. It can surface problems involving:
+| Area | Examples |
+| --- | --- |
+| Installation | expected files/components, version state |
+| Permissions | secret-file modes and ownership |
+| PKI / trust | CA material and consistency |
+| Runtime | systemd service state |
+| FRP | generated config, transport, local consistency |
+| Enrollment | allocator/HTTPS reachability and trust path |
+| State | registry/client-state consistency |
+| Topology | Direct/single-443 and common network mismatch |
 
-- installation state and expected files
-- permissions and secret file modes
-- PKI and CA trust
-- systemd service state
-- FRP configuration and transport
-- allocator/enrollment reachability
-- registry and client-state consistency
-- deployment topology and common network failures
+`doctor` is read-only.
 
-## Avoid destructive debugging
+## Separate product state from network state
 
-Do not immediately edit generated `frps.toml`, `frpc.toml`, registry files, client identity files, or PKI material. Those are generated or authoritative state and manual edits can make recovery harder.
+```mermaid
+flowchart TD
+    A[Service unreachable] --> B{Client/service state healthy?}
+    B -->|No| C[Product state / FRP config / identity]
+    B -->|Yes| D{Public service port reachable?}
+    D -->|No| E[Cloud firewall / NAT / external firewall]
+    D -->|Yes| F{Client can reach target?}
+    F -->|No| G[Target app / LAN routing / ACL]
+    F -->|Yes| H[Protocol-specific investigation]
+```
 
-If TCP connects but TLS is reset in an enterprise network, review [Deployment Modes](/deployment/modes) rather than disabling TLS verification.
+FRP Auto Deploy does not automatically control external security groups, NAT, DNS, or the target application's own listener/authentication.
 
-If the FRP server sits behind a firewall/NAT device, also verify [Firewall & NAT](/deployment/firewall-nat) and [Network Ports](/reference/network-ports).
+## Useful target checks
+
+For a local SSH target:
+
+```bash
+ss -lntp | grep ':22'
+```
+
+For a LAN target, prove the client itself can reach `target-host:target-port` before debugging the FRP public path.
+
+## Avoid destructive diagnosis
+
+Do not start by editing or replacing:
+
+```text
+/etc/frp/frps.toml
+/etc/frp/frpc.toml
+/var/lib/frp-auto-deploy/registry.json
+/etc/frp/client-state.json
+client management identity files
+project PKI
+```
+
+Manual edits can erase the evidence that explains the original problem or create a second consistency problem.
+
+## When the symptom is already known
+
+Use the symptom-driven [Troubleshooting](/troubleshooting/overview) page for:
+
+- client missing after enrollment
+- published SSH/web port unreachable
+- LAN target unreachable
+- TCP handshake works but TLS resets
+- IP works but hostname fails
+- HTTPS certificate warning
+- server behind NAT

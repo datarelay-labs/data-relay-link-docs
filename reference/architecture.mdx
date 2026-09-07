@@ -1,0 +1,145 @@
+---
+title: "Architecture"
+description: "Expert view of the control plane, data path, trust boundaries, persistent state, and deployment topology."
+sidebarTitle: "Architecture"
+icon: "sitemap"
+---
+
+# Architecture
+
+This page is the deeper technical view. For the beginner model, start with [Concepts & Mental Model](/getting-started/concepts).
+
+## System architecture
+
+```mermaid
+flowchart LR
+    U[Operator / Internet user]
+    F[Public firewall / NAT\noptional]
+    S[FRP Auto Deploy server]
+    C1[Client A\nfrpc + management identity]
+    C2[Client B\nfrpc + management identity]
+    L1[Local services\n127.0.0.1:*]
+    L2[Reachable LAN services\n10.x / 172.16-31.x / 192.168.x]
+
+    U -->|published TCP port| F
+    F --> S
+    C1 -->|outbound FRP control| S
+    C2 -->|outbound FRP control| S
+    C1 --> L1
+    C1 --> L2
+    C2 --> L1
+```
+
+The product is intentionally a **small management layer around official FRP**, not a replacement tunnel engine.
+
+## Control plane vs data plane
+
+| Plane | Purpose | Typical transport |
+| --- | --- | --- |
+| Enrollment / management | bootstrap trust, identity, service metadata, management actions | verified HTTPS |
+| FRP control | register proxies and maintain reverse tunnel control | FRP native TLS or WSS |
+| Published service data | carry SSH/HTTP/HTTPS/custom TCP | TCP through FRP proxy |
+
+These planes use different credentials and should not be treated as interchangeable.
+
+## Direct mode
+
+```mermaid
+flowchart TB
+    I[Internet]
+    S[FRP Auto Deploy server]
+    A[Enrollment / management HTTPS\nTCP 6099]
+    C[FRP control\nTCP 443]
+    P[Published services\nTCP 6000-6098]
+
+    I --> A
+    I --> C
+    I --> P
+    A --> S
+    C --> S
+    P --> S
+```
+
+Direct is the default deployment mode.
+
+## Enterprise single-443
+
+```mermaid
+flowchart TB
+    I[Internet]
+    FE[Public frontend\nTCP 443]
+    A[Allocator backend\n127.0.0.1:6099]
+    F[FRP backend\n127.0.0.1:7000]
+    P[Published services\nTCP 6000-6098]
+
+    I --> FE
+    FE -->|HTTPS enrollment paths| A
+    FE -->|FRP control over WSS| F
+    I --> P
+```
+
+The backend ports `6099` and `7000` are loopback-only in this mode and should not be Internet-exposed.
+
+## Identity model
+
+```mermaid
+flowchart TD
+    M[Machine] --> CID[Immutable CLIENT ID]
+    CID --> MI[Persistent management identity]
+    CID --> SV[Services]
+    CID --> META[Mutable metadata]
+    META --> L[label]
+    META --> H[hostname]
+    META --> N[note]
+    META --> T[tags]
+    SV --> SID[Stable Service ID]
+    SID --> PP[Persistent public-port reservation]
+```
+
+The important design rule is that mutable display metadata never becomes canonical identity.
+
+## Trust establishment
+
+```mermaid
+sequenceDiagram
+    participant C as New client
+    participant S as Server
+    participant CA as Project private CA
+
+    C->>S: Bootstrap ticket / Enrollment Code
+    S-->>C: CA material + expected fingerprint path
+    C->>C: Verify CA fingerprint / X.509
+    C->>S: Verified HTTPS enrollment
+    S-->>C: Persistent management identity + config
+    C->>S: Signed management requests thereafter
+```
+
+The FRP token authenticates the FRP tunnel. It is **not** the same credential as the Enrollment Code, Bootstrap Ticket, or client management identity.
+
+## Persistent server state
+
+Important state includes:
+
+```text
+/etc/frp-auto-deploy/config.json
+/etc/frp-auto-deploy/pki/
+/etc/frp/server_token
+/var/lib/frp-auto-deploy/registry.json
+```
+
+The design goal is to preserve identity, CA trust, token, registry, and public-port reservations across normal updates, reboots, and supported restore workflows.
+
+## Fail-closed rules
+
+The management layer should fail rather than guess when it encounters conditions such as:
+
+- unknown or ambiguous client identity
+- invalid signatures
+- CA mismatch
+- inconsistent registry state
+- unknown release identity
+- unsafe restore/update conditions
+
+## Scale boundary
+
+FRP Auto Deploy is optimized for a few systems to a few dozen clients. It does not aim to become a large-fleet orchestrator, CMDB, endpoint compliance platform, or high-availability management cluster.

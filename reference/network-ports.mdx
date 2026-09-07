@@ -5,31 +5,75 @@ description: "Default public and internal TCP ports used by Direct and Enterpris
 
 # Network Ports
 
-FRP Auto Deploy publishes TCP services. The default published service range is **6000-6098**.
+FRP Auto Deploy publishes **TCP** services. Default published service range: **6000-6098**.
+
+## Port direction at a glance
+
+```mermaid
+flowchart LR
+    C[Remote client]
+    S[FRP Auto Deploy server]
+    U[Internet user]
+
+    C -->|outbound FRP control| S
+    C -->|outbound enrollment / management HTTPS| S
+    U -->|inbound published service port| S
+```
+
+The remote client normally initiates its connections outbound. The server/public firewall must still accept the required inbound endpoints.
 
 ## Direct mode
 
-| Purpose | Default public TCP | Default listen TCP |
-| --- | ---: | ---: |
-| FRP control | 443 | 443 |
-| Enrollment / management HTTPS | 6099 | 6099 |
-| Published services | 6000-6098 | 6000-6098 |
+| Purpose | Who initiates | Default public TCP | Default server listen TCP |
+| --- | --- | --: | --: |
+| FRP control | Client → Server | 443 | 443 |
+| Enrollment / management HTTPS | Client → Server | 6099 | 6099 |
+| Published service | User → Server | 6000-6098 | 6000-6098 |
 
 TCP/22 is optional for your own administrative SSH access to the server and is not part of the FRP Auto Deploy product path.
 
 ## Enterprise single-443
+
+```mermaid
+flowchart LR
+    C[Remote client] -->|HTTPS + WSS TCP 443| FE[Public frontend]
+    FE -->|enrollment| A[127.0.0.1:6099]
+    FE -->|FRP control| F[127.0.0.1:7000]
+    U[Internet user] -->|6000-6098| P[Published services]
+```
 
 | Purpose | Public TCP | Internal/backend TCP |
 | --- | ---: | ---: |
 | HTTPS enrollment + FRP control over WSS | 443 | allocator 6099 + frps 7000 on loopback |
 | Published services | 6000-6098 | 6000-6098 |
 
-In single-443 mode, the allocator backend and FRP control backend are not intended to be Internet-exposed.
+<Warning>
+  In single-443 mode, allocator backend `6099` and FRP backend `7000` are not intended to be Internet-exposed.
+</Warning>
 
 ## NAT deployments
 
-The public control/enrollment ports can be translated by an external firewall if necessary. Published service ports should normally remain 1:1 so the server's persistent port reservation matches the Internet-facing endpoint.
+The public control/enrollment ports may be translated by an external firewall.
+
+Example Direct mapping:
+
+```text
+Public 8443  -> Server 443
+Public 9443  -> Server 6099
+Public 6001  -> Server 6001
+```
+
+Published service ports should normally stay 1:1 so the persistent FRP Auto Deploy reservation matches the port users actually connect to.
 
 ## TCP only
 
-The current core product scope is TCP: SSH, HTTP, HTTPS passthrough, and custom TCP. UDP is not part of the current stable core scope.
+Current stable core scope:
+
+```text
+SSH
+HTTP
+HTTPS passthrough
+Custom TCP
+```
+
+UDP is not part of the current stable core product scope.

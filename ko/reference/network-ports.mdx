@@ -1,0 +1,68 @@
+---
+title: "네트워크 포트"
+sidebarTitle: "네트워크 포트"
+description: "Direct와 Enterprise single-443 배포에서 사용하는 public/internal TCP 포트를 한눈에 정리합니다."
+icon: "ethernet"
+---
+
+# 네트워크 포트
+
+FRP Auto Deploy의 현재 stable core scope는 **TCP**입니다. 기본 published service range는 `6000-6098`입니다.
+
+## 한눈에 보기
+
+```mermaid
+flowchart LR
+    I[Internet] -->|443| S[FRP Auto Deploy Server]
+    I -->|6099 Direct only| S
+    I -->|6000-6098| S
+    S -->|FRP tunnel| C[Remote Client]
+    C --> T[Target TCP services]
+```
+
+## Direct mode
+
+| 목적 | 기본 public TCP | 기본 listen TCP |
+| --- | ---: | ---: |
+| FRP control | 443 | 443 |
+| Enrollment / management HTTPS | 6099 | 6099 |
+| Published services | 6000-6098 | 6000-6098 |
+
+`TCP/22`는 FRP Auto Deploy product path가 아니라 서버 자체 관리용 SSH일 뿐입니다.
+
+## Enterprise single-443
+
+| 목적 | Public TCP | 내부/backend TCP |
+| --- | ---: | ---: |
+| Enrollment HTTPS + FRP control over WSS | 443 | allocator 6099 + frps 7000 loopback |
+| Published services | 6000-6098 | 6000-6098 |
+
+```mermaid
+flowchart LR
+    I[Internet] -->|443 HTTPS/WSS| P[443 Frontend]
+    P -->|Enrollment| A[Allocator :6099 loopback]
+    P -->|FRP control| F[frps :7000 loopback]
+    I -->|6000-6098| F
+```
+
+<Warning>
+  single-443의 allocator/frps backend port는 Internet에 직접 노출하는 포트가 아닙니다.
+</Warning>
+
+## NAT 배포
+
+Control/enrollment 외부 포트는 방화벽에서 translation할 수 있지만, published service는 가능하면 1:1을 권장합니다.
+
+```text
+Public 6005 -> Internal 6005
+```
+
+이렇게 해야 registry의 persistent reservation과 실제 사용자가 접속하는 포트가 일치합니다.
+
+## 현재 범위
+
+- SSH — TCP
+- HTTP — TCP
+- HTTPS — TCP passthrough
+- Custom TCP — TCP
+- UDP — 현재 stable core scope 아님

@@ -1,0 +1,94 @@
+---
+title: "HTTP & HTTPS"
+description: "웹 서비스를 TCP로 게시하고 HTTPS passthrough, DNS, certificate 동작을 이해합니다."
+icon: "globe"
+---
+
+# HTTP & HTTPS
+
+FRP Auto Deploy는 HTTP/HTTPS를 **TCP service**로 게시합니다. Published service용 application reverse proxy가 아닙니다.
+
+## HTTP
+
+```mermaid
+flowchart LR
+    B[Browser] -->|http://server:6001| S[FRP Server]
+    S --> C[FRP Client]
+    C -->|127.0.0.1:80| W[HTTP App]
+```
+
+Target은 Client local 또는 LAN host일 수 있습니다.
+
+```text
+127.0.0.1:80
+10.10.20.40:80
+```
+
+## HTTPS: TLS는 target까지 그대로 전달
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as FRP Server
+    participant C as FRP Client
+    participant W as HTTPS App
+
+    B->>S: TLS to public service port
+    S->>C: encrypted TCP
+    C->>W: encrypted TCP
+    W-->>B: target app certificate + TLS response
+```
+
+FRP Auto Deploy가 TLS를 종료하거나 certificate를 발급/교체하지 않습니다.
+
+## Hostname과 certificate
+
+예:
+
+```text
+Public hostname : fw.example.com
+Public port     : 6005
+Target          : 127.0.0.1:443
+```
+
+사용자 접속:
+
+```text
+https://fw.example.com:6005
+```
+
+실제 target application certificate가 `fw.example.com`에 유효해야 합니다.
+
+## 한 Client에서 여러 Web Service
+
+```mermaid
+flowchart LR
+    U[Users]
+    S[FRP Server]
+    C[Client A]
+    A[web-admin\n127.0.0.1:443]
+    B[api\n127.0.0.1:8080]
+    D[lan-ui\n10.10.20.50:8443]
+
+    U -->|6001| S
+    U -->|6002| S
+    U -->|6003| S
+    S --> C
+    C --> A
+    C --> B
+    C --> D
+```
+
+## 증상별 확인
+
+| 증상 | 우선 확인 |
+| --- | --- |
+| Timeout | public firewall/NAT/service port |
+| Connection refused | target listener/bind |
+| IP는 되고 hostname 실패 | DNS/hairpin NAT |
+| HTTPS certificate warning | target certificate SAN |
+| LAN Web만 실패 | Client→LAN routing/ACL |
+
+<Tip>
+  먼저 Client에서 target에 직접 연결 가능한지 확인하고, 그 다음 public service port, 마지막으로 DNS/TLS hostname을 확인하세요.
+</Tip>

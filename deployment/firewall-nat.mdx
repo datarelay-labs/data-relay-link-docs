@@ -5,33 +5,36 @@ description: "Deploy the FRP Auto Deploy server directly on the Internet or behi
 
 # Firewall & NAT
 
-NAT is a network topology, not a separate FRP Auto Deploy deployment mode. A Direct-mode server can have its own public IP or can sit behind an external firewall/NAT device.
+The remote **client** normally does not need inbound port forwarding. The **FRP server side** still needs a reachable public entry point for control, enrollment, and published service ports.
 
-## Direct server with a public IP
+## Topology A — server has a public IP
 
-Typical inbound TCP requirements:
-
-```text
-443         FRP control
-6099        Enrollment / management HTTPS
-6000-6098   Published services
+```mermaid
+flowchart LR
+    C[Remote client\nbehind NAT] -->|outbound 443 / 6099| S[FRP server\npublic IP]
+    U[Internet user] -->|assigned 6000-6098 port| S
 ```
 
-## Server behind a firewall
-
-Example topology:
+Direct defaults:
 
 ```text
-Internet
-   |
-203.0.113.10
-Firewall / NAT
-   |
-192.0.2.50
-FRP Auto Deploy Server
+TCP 443       FRP control
+TCP 6099      Enrollment / management HTTPS
+TCP 6000-6098 Published services
 ```
 
-A typical mapping can keep published service ports 1:1 while translating the control and enrollment ports if required:
+## Topology B — server is private behind a firewall
+
+```mermaid
+flowchart LR
+    C[Remote client] -->|public 8443 / 9443| F[Firewall / NAT\n203.0.113.10]
+    U[Internet user] -->|public service port| F
+    F -->|8443 -> 443| S[FRP server\n192.0.2.50]
+    F -->|9443 -> 6099| S
+    F -->|6000-6098 -> same ports| S
+```
+
+Example DNAT:
 
 ```text
 203.0.113.10:8443       -> 192.0.2.50:443
@@ -39,30 +42,52 @@ A typical mapping can keep published service ports 1:1 while translating the con
 203.0.113.10:6000-6098  -> 192.0.2.50:6000-6098
 ```
 
-Clients must use the **public** endpoints, not the private server address.
+The client configuration must use the **public** endpoints (`203.0.113.10:8443`, `:9443` in this example), not the private server address.
 
-## Published service ports
+## Why published service ports should stay 1:1
 
-For the normal product model, keep a published service port the same on the public and internal sides whenever possible:
-
-```text
-Public 6001 -> Internal 6001
+```mermaid
+flowchart LR
+    R[Server registry\nService public port = 6001] --> F[Firewall]
+    F --> S[Private FRP server\nlisten 6001]
 ```
 
-Changing a service to a different external port can make the product's persistent public-port reservation differ from the Internet-facing endpoint, which is harder to operate and document.
+Keeping public `6001 -> internal 6001` means the product's persistent reservation is also the port users actually connect to.
 
-## Responsibility boundary
+If an external firewall arbitrarily remaps every service port, the registry and Internet-facing endpoint stop matching, which makes operations and troubleshooting harder.
 
-FRP Auto Deploy does not automatically configure:
+## Who is responsible for what?
 
-- AWS Security Groups
-- OCI Security Lists
-- external firewalls or NAT rules
-- UFW, firewalld, or iptables
-- customer SSH accounts or SSH keys
+| Component | FRP Auto Deploy configures it? |
+| --- | --- |
+| FRP server/client config | **Yes** |
+| Service-port reservation | **Yes** |
+| AWS Security Group | No |
+| OCI Security List / NSG | No |
+| External firewall/DNAT | No |
+| UFW/firewalld/iptables | No |
+| DNS record | No |
+| SSH account/key | No |
 
-Configure those controls explicitly in the infrastructure that owns them.
+## Hairpin NAT / split DNS
 
-## Hairpin NAT
+An internal user may fail to reach `fw.example.com` if that hostname resolves to the firewall's public IP and the firewall does not support hairpin NAT.
 
-If an internal user tries to reach the server through its public hostname and public IP, success depends on the firewall's hairpin NAT behavior. If the firewall does not support it, use hairpin NAT configuration or split DNS.
+```mermaid
+flowchart LR
+    I[Internal user] -->|fw.example.com -> public IP| F[Firewall]
+    F -. hairpin required .-> S[Internal FRP server]
+```
+
+If hairpin NAT is unavailable, use split DNS or another appropriate internal routing design.
+
+## Troubleshooting NAT
+
+Check in this order:
+
+1. public DNS/IP points to the correct firewall
+2. public control port DNATs to the expected server listen port
+3. public enrollment HTTPS DNATs correctly
+4. published service port stays open and preferably 1:1
+5. local `frpctl doctor` reports a healthy topology
+6. the client can reach the **public** endpoints from its own network

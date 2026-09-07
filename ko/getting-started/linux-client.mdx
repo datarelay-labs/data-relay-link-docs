@@ -5,11 +5,47 @@ description: "Linux/systemd 클라이언트를 등록하고 상태를 확인하�
 
 # Linux 클라이언트
 
-현재 stable 클라이언트 범위는 **Linux/systemd**입니다.
+현재 stable client 범위는 **Linux/systemd**입니다.
+
+## 등록 전 확인
+
+- `sudo`/root 권한이 있음
+- 클라이언트에서 FRP 서버 public endpoint로 outbound 연결 가능
+- 게시할 target 서비스가 실제로 실행 중이거나 클라이언트에서 접근 가능
+- SSH를 게시한다면 SSH 계정과 `sshd`가 이미 준비됨
+
+FRP Auto Deploy는 OS user/password/SSH key/application service를 자동 생성하지 않습니다.
+
+## 등록 방식을 선택하세요
+
+| 방식 | 적합한 상황 | 초기 서비스 선택 |
+| --- | --- | --- |
+| **Zero-Touch** | 서버 관리자가 프로필을 미리 정함 | 서버 관리자 |
+| **Manual Enrollment Code** | 원격 사용자가 설치 중 서비스를 선택 | 원격 사용자 |
+
+```mermaid
+flowchart TD
+    A[새 Client 등록] --> B{초기 프로필을\n서버 관리자가 정할까요?}
+    B -->|예| Z[Zero-Touch]
+    B -->|아니오| M[Manual Enrollment Code]
+    Z --> V[생성 명령 1회 실행]
+    M --> V
+    V --> C[Client/Server 상태 확인]
+```
 
 ## 권장: Zero-Touch
 
-서버 관리자가 초기 SSH 프로필을 정하고 한 줄 명령을 발급합니다.
+가장 쉬운 CLI 방식:
+
+```bash
+sudo frpctl
+```
+
+```text
+create zero-touch
+```
+
+SSH 프로필을 명시하려면:
 
 ```bash
 sudo frpctl create enrollment \
@@ -19,21 +55,33 @@ sudo frpctl create enrollment \
   --label branch-a
 ```
 
-원격 Linux 시스템에서 생성된 명령을 한 번 실행합니다.
+`aella`는 원격 client에 이미 존재하는 SSH account로 바꾸세요. 서버가 출력한 **정확한 명령을 그대로** client에서 실행합니다.
 
-## 수동 Enrollment Code
+## Manual Enrollment Code
 
-원격 사용자가 설치 과정에서 서비스 종류와 타깃을 선택해야 한다면 서버에서:
+서버에서:
 
 ```bash
 sudo frpctl create enrollment
 ```
 
-생성된 설치 명령을 원격 시스템에서 실행하고, 프롬프트에 Enrollment Code를 입력합니다.
+생성된 bootstrap 명령을 client에서 실행하고 프롬프트에 단기 Enrollment Code를 입력합니다.
 
-## 설치 후 확인
+## 등록 과정
 
-클라이언트에서:
+```mermaid
+sequenceDiagram
+    participant C as Linux Client
+    participant S as FRP Auto Deploy Server
+
+    C->>S: Bootstrap credential over HTTPS
+    C->>C: Server trust / CA 검증
+    C->>S: Enrollment
+    S-->>C: CLIENT identity + service config
+    C->>S: Outbound FRP control tunnel
+```
+
+## Client에서 확인
 
 ```bash
 sudo frpctl show version
@@ -43,16 +91,20 @@ sudo frpctl show info
 sudo frpctl doctor
 ```
 
-서버에서:
+## Server에서 확인
 
 ```bash
 sudo frpctl show clients
+sudo frpctl show enrollments
 sudo frpctl show client <CLIENT-ID>
+sudo frpctl show client <CLIENT-ID> services
 ```
 
-## 서비스 변경
+정상 등록 후에는 일반 재부팅, 지원되는 service edit, 정상 project update 때문에 다시 enrollment할 필요가 없습니다.
 
-클라이언트에서 서비스 변경은 staged 상태로 관리됩니다.
+## 나중에 서비스 변경
+
+Client service 변경은 staged 상태입니다.
 
 ```text
 add service
@@ -61,10 +113,12 @@ set service <service-id> target-port <port>
 apply
 ```
 
-잘못 수정했다면 `apply` 전에 `discard`할 수 있습니다.
+`apply` 전에 취소하려면 `discard`를 사용합니다.
 
-## 중요한 점
+## 꼭 기억할 것
 
-- 재부팅만으로 재등록할 필요가 없습니다.
-- 일반 업데이트는 CLIENT ID와 공개 포트 예약을 유지하도록 설계되어 있습니다.
-- 로컬 클라이언트 삭제와 서버 측 `release`는 같은 작업이 아닙니다.
+```text
+client uninstall != server release
+```
+
+Client local software를 지워도 server public-port reservation이 자동 반환되지는 않습니다.

@@ -5,82 +5,110 @@ description: "Understand the problem FRP Auto Deploy solves and the operating mo
 
 # What is FRP Auto Deploy?
 
-FRP Auto Deploy is a **lightweight deployment and operations layer for official FRP**. It is designed for small remote-access environments where a few systems to a few dozen systems need to be reached safely from outside a private network.
+FRP Auto Deploy is a **lightweight deployment and operations layer for official FRP**. It is built for small remote-access environments where a few systems to a few dozen systems need to be reached safely from outside private networks.
 
-It does not fork or modify FRP. FRP remains the tunnel engine; FRP Auto Deploy adds the operational layer around it.
+<Note>
+  **FRP** is the tunnel engine. **FRP Auto Deploy** is the installation, enrollment, identity, service, port, lifecycle, backup, diagnostics, and operator experience around it.
+</Note>
 
-## The problem
+## The problem it solves
 
-A server inside a customer, partner, branch, or lab network often looks like this:
+Without a reverse-tunnel approach, remote support often becomes a chain of infrastructure requests:
 
-```text
-Internet
-   |
-Firewall / NAT
-   |
-Private network
-   |
-Linux server
+```mermaid
+flowchart LR
+    E[Support engineer] --> V[Request VPN access]
+    V --> F[Request firewall/NAT change]
+    F --> B[Find bastion / internal path]
+    B --> H[Reach private server]
 ```
 
-Traditional remote support can require VPN accounts, firewall changes, NAT rules, bastion hosts, or manual FRP configuration. That is often too much work for temporary support or small environments.
+For temporary support, labs, partners, branches, and small infrastructure, that process can be much heavier than the actual technical task.
 
-## The FRP Auto Deploy model
+## The operating model
 
-A public FRP Auto Deploy server is installed once. Remote clients initiate outbound connectivity to it.
+Install the public server once. Remote clients enroll and initiate outbound tunnels toward it.
 
-```text
-Operator
-   |
-   v
-FRP Auto Deploy Server
-   ^
-   | outbound tunnel
-   |
-Remote Client behind NAT
-   |
-   +-- 127.0.0.1:22
-   +-- 127.0.0.1:443
-   +-- 10.10.20.30:22
-   +-- 10.10.20.40:80
+```mermaid
+flowchart LR
+    O[Operator]
+    S[FRP Auto Deploy server\npublic entry point]
+    C[Remote client\nbehind NAT/firewall]
+    LOCAL[Local services\n127.0.0.1:*]
+    LAN[Other LAN hosts\n10.x / 172.16-31.x / 192.168.x]
+
+    C -->|outbound FRP control| S
+    O -->|public service port| S
+    S -->|service traffic| C
+    C --> LOCAL
+    C --> LAN
 ```
 
-A client can publish its own local services or act as a small gateway for services on LAN hosts it can reach.
+A client can publish its own services or act as a small gateway for services on other LAN hosts that it can reach.
+
+## Who is it for?
+
+<CardGroup cols={2}>
+  <Card title="System administrators" icon="server">
+    Reach remote Linux systems without building a full VPN or RMM stack.
+  </Card>
+
+  <Card title="Technical support engineers" icon="headset">
+    Give customers or partners a controlled one-command onboarding path.
+  </Card>
+
+  <Card title="Lab / partner operators" icon="flask">
+    Publish a few services from private networks through one controlled public entry point.
+  </Card>
+
+  <Card title="Small infrastructure teams" icon="network-wired">
+    Manage a few to a few dozen systems with stable identities, ports, and a CLI.
+  </Card>
+</CardGroup>
 
 ## What the product manages
 
-- Server and client installation
-- Secure enrollment
-- Persistent client identity
-- Multiple services per client
-- Persistent public TCP port reservations
-- Zero-Touch bootstrap
-- Client inventory and metadata
-- Day-to-day operations through `frpctl`
-- Backup and restore
-- Diagnostics with `doctor`
-- Audit and release-safe lifecycle controls
+```mermaid
+flowchart TB
+    FRP[Official FRP\nTunnel engine]
+    AD[FRP Auto Deploy]
+    AD --> I[Install / update]
+    AD --> E[Enrollment / trust]
+    AD --> ID[CLIENT ID / metadata]
+    AD --> SV[Service definitions]
+    AD --> PP[Persistent public ports]
+    AD --> CLI[frpctl operations]
+    AD --> DR[Backup / restore / doctor]
+    FRP --> AD
+```
 
-## What it does not manage
+## What it intentionally does not manage
 
-FRP Auto Deploy intentionally does **not** automatically configure:
-
-- Cloud security groups
-- External firewalls or NAT rules
-- UFW, firewalld, or iptables
+- cloud security groups
+- external firewalls or NAT/DNAT rules
+- UFW, firewalld, or iptables policy
 - DNS provider records
-- SSH accounts, passwords, or SSH keys
-- Application TLS certificates
+- operating-system accounts, passwords, or SSH keys
+- application authentication
+- application TLS certificates
 
-This boundary keeps the product lightweight and predictable.
+Keeping those boundaries explicit makes the product smaller and easier to reason about.
 
 ## Supported service model
 
-The normal service types are:
+The stable core publishes **TCP** services:
 
 - SSH
 - HTTP
 - HTTPS passthrough
 - Custom TCP
 
-All of these are ultimately published as TCP services through FRP.
+Each service gets a stable Service ID and a persistent public-port reservation.
+
+## Recommended reading order
+
+1. [Concepts & Mental Model](/getting-started/concepts) — terminology and diagrams
+2. [Quick Start](/getting-started/quickstart) — first working connection
+3. [Publishing Services](/guides/services) — SSH/web/custom/LAN examples
+4. [frpctl Guide](/frpctl/overview) — everyday operation
+5. [Architecture](/reference/architecture) — expert internals

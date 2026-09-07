@@ -5,32 +5,48 @@ description: "Install the server, enroll a client, and publish your first SSH se
 
 # Quick Start
 
-This guide uses the current stable release, **v2.1.2**, and takes you from an empty Linux server to a working remote SSH connection.
+This is the shortest stable **v2.1.2** path from an empty server to a working remote SSH connection.
+
+## What you are building
+
+```mermaid
+flowchart LR
+    U[Your laptop]
+    S[FRP Auto Deploy server]
+    C[Remote Linux client\nbehind NAT/firewall]
+    SSH[sshd\n127.0.0.1:22]
+
+    C -->|outbound tunnel| S
+    U -->|ssh -p assigned-port| S
+    S --> C
+    C --> SSH
+```
 
 ## Before you start
 
 You need:
 
-- one supported Linux/systemd server that remote clients can reach
-- one Linux/systemd client to enroll
-- an SSH account that already exists on the client
-- the required firewall/NAT rules for the server deployment
+- a Linux/systemd server that remote clients can reach through a public entry point
+- a Linux/systemd client
+- an SSH account that already exists on that client
+- server firewall/NAT rules for the chosen deployment
+- `sudo`/root privileges for installation
 
-For the default Direct deployment, the usual public inbound TCP requirements are:
+For a first deployment, **Ubuntu 24.04 x86_64** is the clearest real-validated baseline.
 
-```text
-443         FRP control
-6099        Enrollment / management HTTPS
-6000-6098   Published services
-```
+### Direct mode network requirements
+
+| Direction | Purpose | Default TCP |
+| --- | --- | --: |
+| Client → Server | FRP control | 443 |
+| Client → Server | Enrollment / management HTTPS | 6099 |
+| User → Server | Published services | 6000-6098 as assigned |
 
 <Warning>
-  FRP Auto Deploy does not automatically change an external firewall, cloud security group, NAT rule, UFW, firewalld, or iptables policy.
+  FRP Auto Deploy does not automatically change cloud security groups, external firewalls, NAT rules, UFW, firewalld, or iptables.
 </Warning>
 
 ## 1. Install the server
-
-On the Linux server:
 
 ```bash
 curl -fsSL \
@@ -40,7 +56,7 @@ curl -fsSL \
 
 The interactive installer asks for the public endpoint, optional published-service hostname, internal IP, deployment mode, and port settings.
 
-If the server is behind a firewall/NAT device, read [Firewall & NAT](/deployment/firewall-nat) before accepting port assumptions.
+If the server is behind a firewall/NAT device, read [Firewall & NAT](/deployment/firewall-nat) before accepting the defaults.
 
 ## 2. Verify the server
 
@@ -50,15 +66,31 @@ sudo frpctl show status
 sudo frpctl doctor
 ```
 
-`doctor` is read-only and is the preferred first diagnostic command.
-
 <Check>
-  Continue only after the expected server services are active and `doctor` does not report a blocking configuration error.
+  Continue only after the expected services are active and `doctor` does not report a blocking configuration/trust problem.
 </Check>
 
-## 3. Create a Zero-Touch SSH enrollment
+## 3. Create the client enrollment
 
-On the server:
+### Easiest interactive path
+
+Start the CLI:
+
+```bash
+sudo frpctl
+```
+
+Then use:
+
+```text
+create zero-touch
+```
+
+This is the recommended everyday onboarding path.
+
+### Explicit SSH one-liner profile
+
+For a predictable SSH profile from the shell:
 
 ```bash
 sudo frpctl create enrollment \
@@ -70,77 +102,84 @@ sudo frpctl create enrollment \
 
 Replace `aella` with an SSH user that **already exists on the remote client**.
 
-FRP Auto Deploy does not create OS users, install or configure an SSH server, change passwords, or manage SSH keys.
-
-The server prints a one-time bootstrap command. Treat the complete command as short-lived sensitive material and send it to the remote operator through an appropriate private channel.
+FRP Auto Deploy does not create OS users, install/configure `sshd`, change passwords, or manage SSH keys.
 
 ## 4. Run the generated command on the client
 
-On the remote Linux client, run the **exact command printed by the server** once.
+Send the **exact generated command** to the remote operator through an appropriate private channel and run it once on the Linux client.
 
-After installation, verify locally:
+```mermaid
+sequenceDiagram
+    participant A as Server admin
+    participant S as FRP server
+    participant C as Remote client
+
+    A->>S: create zero-touch / enrollment
+    S-->>A: one-time bootstrap command
+    A-->>C: send privately
+    C->>S: HTTPS bootstrap + enrollment
+    S-->>C: persistent identity + service config
+    C->>S: outbound FRP control tunnel
+```
+
+Treat the generated bootstrap command as sensitive until it is used, expires, or is revoked.
+
+## 5. Verify on the client
 
 ```bash
+sudo frpctl show version
 sudo frpctl show status
 sudo frpctl show services
 sudo frpctl show info
 sudo frpctl doctor
 ```
 
-<Check>
-  The client should show the enrolled service and a healthy FRP client state.
-</Check>
-
-## 5. Confirm registration on the server
-
-Back on the server:
+## 6. Verify on the server
 
 ```bash
 sudo frpctl show clients
 sudo frpctl show enrollments
 ```
 
-The enrolled machine receives a persistent CLIENT ID and its SSH service receives an assigned public service port.
-
-For more detail:
+Then inspect the assigned service port:
 
 ```bash
-sudo frpctl show client <CLIENT-ID>
 sudo frpctl show client <CLIENT-ID> services
 ```
 
-## 6. Connect over SSH
+The client receives a persistent CLIENT ID and the SSH service receives a persistent public-port reservation.
+
+## 7. Connect over SSH
 
 ```bash
 ssh -p <public-port> aella@<FRP-server-public-IP>
 ```
 
-If you configured an optional published-service hostname:
+With an optional public service hostname:
 
 ```bash
 ssh -p <public-port> aella@fw.example.com
 ```
 
-The server public IP remains the infrastructure fallback.
-
 ## Success checklist
 
-You are finished when all of the following are true:
+You are finished when all of these are true:
 
-- `show clients` lists the client with a CLIENT ID
-- the SSH service has a public service port
-- the client reports healthy state
-- the server's published service port is reachable through the external firewall/NAT
-- `ssh -p <public-port> ...` reaches the intended client SSH service
+- the client appears in `show clients`
+- the client has a CLIENT ID
+- the SSH service has an assigned public port
+- the client reports healthy FRP state
+- the public service port is allowed through the server-side firewall/NAT
+- SSH reaches the intended target
 
 ## If it does not work
 
-Start with [Troubleshooting](/troubleshooting/overview) and `frpctl doctor` on both server and client. Avoid manually editing registry, identity, or generated FRP files as a first response.
+Use [Troubleshooting](/troubleshooting/overview) and run `frpctl doctor` on both sides **before** editing generated config, registry, identity, or PKI files.
 
 ## Next steps
 
+- [Concepts & Mental Model](/getting-started/concepts)
 - [Linux Client](/getting-started/linux-client)
-- [Zero-Touch Enrollment](/guides/zero-touch)
 - [Publishing Services](/guides/services)
 - [Deployment Modes](/deployment/modes)
-- [`frpctl` Guide](/frpctl/overview)
+- [frpctl Guide](/frpctl/overview)

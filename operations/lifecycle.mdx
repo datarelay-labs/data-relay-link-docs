@@ -5,45 +5,94 @@ description: "Understand disable, revoke, release, uninstall, purge, and update 
 
 # Lifecycle Semantics
 
-FRP Auto Deploy deliberately separates temporary publication changes, identity revocation, and permanent public-port release.
+FRP Auto Deploy deliberately separates **temporary publication**, **management identity**, and **public-port reservation**. These are different state machines.
 
 ```text
 disable   != release
 revoke    != release
 uninstall != release
-uninstall != purge
 update    != re-enrollment
 ```
 
 ## Service lifecycle
 
+```mermaid
+stateDiagram-v2
+    [*] --> Published
+    Published --> Disabled: disable service
+    Disabled --> Published: enable service
+    Published --> Published: edit + apply
+    Published --> Released: release service
+    Disabled --> Released: release service
+    Released --> [*]
+```
+
 | Action | Effect | Public port |
 | --- | --- | --- |
-| Disable service | Stop publication temporarily | Kept |
-| Enable service | Resume publication | Same port reused |
-| Edit + apply | Change target/name/config | Kept when possible |
-| Release service | Remove reservation | Returned to pool |
+| Disable service | stop publication temporarily | **kept** |
+| Enable service | resume publication | **same port reused** |
+| Edit + apply | change target/name/config | **kept when possible** |
+| Release service | remove reservation | **returned to pool** |
 
-## Client lifecycle
+## Client management lifecycle
 
-`revoke client` blocks the client's management identity but does not automatically return its public service ports.
+```mermaid
+flowchart LR
+    E[Enrolled client] -->|revoke client| R[Management identity blocked]
+    E -->|release client| X[Server record + service reservations released]
+    E -->|local uninstall| L[Client software/state removed locally]
+    L -. does not automatically .-> X
+```
 
-`release client` removes the server-side client record and returns its service-port reservations.
+- `revoke client` blocks the client's management identity but does not mean "free all public ports".
+- `release client` is the server-side operation that removes the client record and returns its service reservations.
+- client uninstall is local-only and does not automatically contact the server to release reservations.
 
 There is intentionally no ambiguous `delete client` command.
 
-## Enrollment lifecycle
+## Enrollment credential lifecycle — stable v2.1.2
 
-`revoke enrollment` blocks an active pending/bound credential.
+```mermaid
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> Bound
+    Pending --> Revoked: revoke enrollment
+    Bound --> Completed
+    Bound --> Revoked: revoke enrollment
+    Pending --> Expired
+    Completed --> [*]
+    Revoked --> [*]
+    Expired --> [*]
+```
 
-`purge enrollment` removes terminal enrollment metadata after the enrollment is expired, completed, or revoked.
+`show enrollments` does not expose the secret itself. Stable v2.1.2 supports revoking active enrollment credentials with:
 
-## Uninstall
+```bash
+sudo frpctl revoke enrollment <ID>
+```
 
-Client uninstall is local-only. It removes local client state but does not contact the server to free reservations.
+<Note>
+  The 2.1.3 development tree adds explicit terminal enrollment purge/retention controls. Those should not be assumed on stable v2.1.2.
+</Note>
 
-Server uninstall preserves core persistent state. Destructive purge is a separate decommission/test action.
+## Which command do I actually want?
 
-## Safe rule
+```mermaid
+flowchart TD
+    A[What is your goal?] --> B{Stop one service temporarily?}
+    B -->|Yes| D[disable service]
+    B -->|No| C{Permanently return its public port?}
+    C -->|Yes| R[release service]
+    C -->|No| M{Block a client's management identity?}
+    M -->|Yes| V[revoke client]
+    M -->|No| X{Decommission client and free all reservations?}
+    X -->|Yes| RC[release client\nthen uninstall local client as needed]
+```
 
-If the goal is only to stop a service temporarily, **disable** it. If the goal is to permanently return the public port, **release** it. If the goal is to block a management identity, **revoke** it.
+## Update
+
+A supported normal project update is not a re-enrollment operation. Identity, CA, token, registry, and persistent public ports are designed to remain intact.
+
+<Warning>
+  Do not use `release` as a generic cleanup command unless you actually intend to return the public-port reservation to the pool.
+</Warning>

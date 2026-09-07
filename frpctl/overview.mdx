@@ -5,21 +5,63 @@ description: "Use the primary operator CLI for clients, services, enrollment, di
 
 # frpctl Guide
 
-`frpctl` is the primary day-to-day operator interface.
+`frpctl` is the everyday operator interface. You can use it interactively or run a full command directly from the shell.
 
-Start the interactive CLI with:
+## Start here if you are new
 
 ```bash
 sudo frpctl
 ```
 
-The canonical grammar is:
+The interactive CLI provides completion and context help:
+
+```text
+Tab    show/complete valid next tokens
+?      context-sensitive help
+help   full command help
+↑/↓    in-memory history for this session
+menu   guided numbered interface
+exit   leave the CLI
+```
+
+## Choose the command by what you want to do
+
+| Intent | Start with |
+| --- | --- |
+| Is everything healthy? | `show status`, `doctor` |
+| What clients exist? | `show clients` |
+| Inspect one client | `show client <ID>` |
+| Onboard a new client | `create zero-touch` |
+| Create a manual Enrollment Code | `create enrollment` |
+| See a client's services | `show client <ID> services` |
+| Change a client's label/note/tag | `set client <ID> ...` |
+| Add/edit a client-side service | `add service`, `set service ...`, then `apply` |
+| Temporarily stop a service | `disable service <service-id>` |
+| Permanently free a service port | `release service <ID> <service-id>` |
+| Block client management identity | `revoke client <ID>` |
+| Check for project update | `update project --check` |
+| Create a backup | `create backup` |
+
+## The grammar
 
 ```text
 <verb> <resource> [target] [property] [value]
 ```
 
-## Common show commands
+```mermaid
+flowchart LR
+    V[Verb\nshow / set / create / release] --> R[Resource\nclient / service / enrollment]
+    R --> T[Target\nCLIENT ID / Service ID]
+    T --> P[Optional property/value]
+```
+
+## CLIENT ID is the canonical selector
+
+The server's canonical identity is the immutable **CLIENT ID**. Label and hostname are human-friendly metadata and can change.
+
+`show clients` prints CLIENT ID first. Tab completion prefers CLIENT ID. A unique label or hostname may work when typed manually, but an ambiguous selector fails closed.
+
+## Common server commands
 
 ```text
 show status
@@ -31,37 +73,43 @@ show client <ID> tags
 show enrollments
 show audit
 show upstream
-show services
-show info
-```
 
-The canonical client selector is **CLIENT ID**. Labels and hostnames are display metadata and may change without changing identity.
+create zero-touch
+create enrollment
+create enrollment --one-line --ssh --ssh-user aella --label branch-a
+create enrollments --count 3
+create backup
 
-## Client metadata
-
-```text
 set client <ID> label <value>
 set client <ID> note <value>
 set client <ID> tag <key> <value>
+set server hostname <fqdn>
 
 unset client <ID> label
 unset client <ID> note
 unset client <ID> tag <key>
-```
-
-## Server hostname
-
-```text
-set server hostname <fqdn>
 unset server hostname
+
+revoke enrollment <ID>
+revoke client <ID>
+release service <ID> <service-id>
+release client <ID>
+
+update project --check
+update project
+update frp --check
+doctor
 ```
 
-This sets an optional published-service DNS alias. It does not change client identity, public ports, the CA, or FRP control identity.
-
-## Service changes on a client
+## Common client commands
 
 ```text
-add service [--preset ssh|http|https|custom] ...
+show status
+show version
+show services
+show info
+
+add service
 set service <service-id> target-host <host>
 set service <service-id> target-port <port>
 set service <service-id> ssh-user <user>
@@ -71,50 +119,35 @@ enable service <service-id>
 disable service <service-id>
 apply
 discard
-```
 
-Service IDs are stable. Pending service edits become live after `apply`.
-
-## Lifecycle operations
-
-```text
-revoke client <ID>
-revoke enrollment <ID>
-purge enrollment <ID>
-release service <ID> <service-id>
-release client <ID>
-```
-
-Remember:
-
-```text
-revoke != release
-disable != release
-```
-
-## Update, backup, restore, and diagnostics
-
-```text
-update project [--check]
-update frp [--check]
-create backup [path]
-restore backup <path>
 doctor
 ```
 
-`doctor` is read-only.
+Client service changes are staged. `apply` makes them live; `discard` drops pending changes.
 
-## Interactive help
+## Three lifecycle verbs you must not mix up
 
-```text
-Tab
-?
-help
-help show
-help set client
-history
-clear
-exit
+```mermaid
+flowchart TD
+    A[Need to stop publication?] -->|temporary| D[disable]
+    A -->|permanently free port| R[release]
+    B[Need to block management identity?] --> V[revoke]
 ```
 
-Session history is not persisted to disk by `frpctl`.
+```text
+disable != release
+revoke  != release
+```
+
+## Stable vs development commands
+
+This documentation's operational baseline is stable **v2.1.2**. The `main` branch identifies as 2.1.3 development and may contain additional commands or lifecycle helpers not present in the stable tag.
+
+For exact stable syntax, use the [CLI Reference](/frpctl/cli-reference).
+
+## Safety behavior
+
+- `doctor` is read-only.
+- `history` is session-only and is not persisted by `frpctl`.
+- FRP stays pinned to the project-tested version; `show upstream` is informational.
+- Ambiguous identity selection should fail rather than guess.

@@ -1,0 +1,135 @@
+---
+title: "Concepts & Mental Model"
+description: "Understand FRP Auto Deploy from first principles: server, client, service, identity, ports, and traffic flow."
+sidebarTitle: "Concepts & Mental Model"
+icon: "diagram-project"
+---
+
+# Concepts & Mental Model
+
+If you are new to FRP, NAT, or reverse tunnels, start here. You do **not** need to understand FRP internals before using FRP Auto Deploy.
+
+## The one-sentence model
+
+> Install one public entry server, let remote clients connect **outbound** to it, then reach each published TCP service through a persistent public port on that server.
+
+## Before vs after
+
+```mermaid
+flowchart LR
+    subgraph BEFORE[Traditional remote support]
+      O1[Support engineer] --> V[VPN / firewall request]
+      V --> N[Manual NAT / port forwarding]
+      N --> H1[Private server]
+    end
+
+    subgraph AFTER[FRP Auto Deploy]
+      C[Client behind NAT] -->|outbound tunnel| S[FRP Auto Deploy server]
+      O2[Support engineer] -->|public service port| S
+      S -->|tunnel| C
+    end
+```
+
+The important difference is **who starts the connection**. The remote client starts the tunnel toward the server, so the client normally does not need its own public IP or inbound NAT rule.
+
+## The five objects to remember
+
+| Object | Plain-English meaning | Example |
+| --- | --- | --- |
+| **Server** | Public entry point that runs FRP server + management layer | `203.0.113.10` |
+| **Client** | Remote machine running `frpc`, usually behind NAT/firewall | branch Linux host |
+| **CLIENT ID** | Immutable machine identity used for administration | `8f31a2c4` |
+| **Service** | One TCP target reachable from a client | `ssh -> 127.0.0.1:22` |
+| **Public port** | Persistent Internet-facing reservation for a service | `6003` |
+
+Labels, hostnames, notes, and tags help humans organize clients, but they are **metadata**. They do not replace CLIENT ID.
+
+## One client can publish many services
+
+```mermaid
+flowchart LR
+    I[Internet user]
+    S[FRP server]
+    C[Client A]
+    SSH[127.0.0.1:22\nSSH]
+    WEB[127.0.0.1:443\nHTTPS]
+    LAN[10.10.20.30:80\nLAN HTTP]
+
+    I -->|6000| S
+    I -->|6001| S
+    I -->|6002| S
+    S --> C
+    C --> SSH
+    C --> WEB
+    C --> LAN
+```
+
+Each service has a stable Service ID and a persistent public-port reservation.
+
+## Three different network paths
+
+FRP Auto Deploy has three paths that beginners often mix together:
+
+```mermaid
+flowchart TB
+    C[Remote client]
+    S[FRP Auto Deploy server]
+    U[Operator / Internet user]
+    T[Target service]
+
+    C -->|1. Enrollment / management HTTPS| S
+    C -->|2. Outbound FRP control tunnel| S
+    U -->|3. Published service port| S
+    S -->|service traffic through tunnel| C
+    C --> T
+```
+
+1. **Enrollment / management** establishes trust and manages client state.
+2. **FRP control** keeps the reverse tunnel available.
+3. **Published service traffic** is the actual SSH/HTTP/HTTPS/custom TCP connection.
+
+## What Zero-Touch actually does
+
+Enrollment is similar to securely pairing a new client with the server.
+
+```mermaid
+sequenceDiagram
+    participant A as Server admin
+    participant S as FRP Auto Deploy server
+    participant C as Remote client
+    participant T as Target service
+
+    A->>S: Create Zero-Touch enrollment
+    S-->>A: One-time bootstrap command
+    A-->>C: Send command privately
+    C->>S: HTTPS bootstrap / enrollment
+    S-->>C: Trust + persistent identity + service config
+    C->>S: Start outbound FRP control tunnel
+    C->>T: Reach configured local/LAN target
+```
+
+After successful enrollment, normal reboots and supported updates do not require re-enrollment.
+
+## Public IP vs public hostname
+
+```text
+Public IP       = infrastructure/control fallback
+Public Hostname = optional human-friendly alias for published services
+```
+
+A hostname does not change CLIENT ID, Service ID, or public-port reservations.
+
+## What FRP Auto Deploy does not do
+
+It intentionally leaves these responsibilities outside the product:
+
+- cloud security groups and external firewall policy
+- NAT/DNAT rules
+- DNS provider records
+- operating-system users and SSH keys
+- application authentication
+- application TLS certificates
+
+<Note>
+  If you only want to get a first connection working, continue with the [Quick Start](/getting-started/quickstart). If you want implementation details, read [Architecture](/reference/architecture).
+</Note>
