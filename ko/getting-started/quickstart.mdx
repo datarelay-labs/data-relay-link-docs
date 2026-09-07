@@ -1,0 +1,88 @@
+---
+title: "빠른 시작"
+description: "서버 설치, 클라이언트 등록, 첫 SSH 연결까지 가장 짧은 경로"
+---
+
+# 빠른 시작
+
+이 가이드는 **현재 stable v2.1.2**를 기준으로 합니다.
+
+## 1. 서버 준비
+
+인터넷에서 접근 가능한 Linux 서버를 준비합니다. 서버는 공인 IP를 직접 가져도 되고, 방화벽/NAT 뒤에서 필요한 포트만 전달받아도 됩니다.
+
+Direct 기본 구성의 외부 인바운드 TCP는 보통 다음과 같습니다.
+
+```text
+443         FRP control
+6099        Enrollment / management HTTPS
+6000-6098   Published services
+```
+
+FRP Auto Deploy는 AWS Security Group, OCI Security List, 외부 NAT, UFW/firewalld/iptables를 자동 변경하지 않습니다.
+
+## 2. 서버 설치
+
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+설치 후 바로 확인합니다.
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+<Note>`doctor`는 읽기 전용입니다. 문제가 있을 때 수동 파일 편집보다 먼저 실행하는 것을 권장합니다.</Note>
+
+## 3. SSH Zero-Touch 등록 생성
+
+서버에서:
+
+```bash
+sudo frpctl create enrollment \
+  --one-line \
+  --ssh \
+  --ssh-user aella \
+  --label branch-a
+```
+
+`aella`는 **원격 Linux 클라이언트에 이미 존재하는 SSH 계정**으로 바꾸세요. FRP Auto Deploy는 OS 계정이나 SSH 키를 생성하지 않습니다.
+
+서버가 출력한 한 줄 명령은 단기 자격 증명을 포함하므로 공개 티켓이나 공개 채팅에 남기지 마세요.
+
+## 4. 원격 클라이언트에서 한 번 실행
+
+원격 사용자는 서버에서 생성된 명령을 그대로 실행합니다. 성공하면 클라이언트는 영구 CLIENT ID를 받고 FRP 터널을 시작합니다.
+
+## 5. 서버에서 등록 확인
+
+```bash
+sudo frpctl show clients
+sudo frpctl show enrollments
+```
+
+SSH 서비스에 배정된 공개 포트를 확인합니다.
+
+## 6. 원격 접속
+
+```bash
+ssh -p <public-port> aella@<FRP-server-public-IP>
+```
+
+공개 서비스용 DNS hostname을 설정했다면 IP 대신 사용할 수 있습니다.
+
+```bash
+ssh -p <public-port> aella@fw.example.com
+```
+
+## 다음 단계
+
+- [서버 설치 상세](/ko/getting-started/server-installation)
+- [Linux 클라이언트](/ko/getting-started/linux-client)
+- [Zero-Touch](/ko/guides/zero-touch)
+- [서비스 게시](/ko/guides/services)
