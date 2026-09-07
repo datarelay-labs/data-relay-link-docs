@@ -116,11 +116,15 @@
           },
           {
             "group": "frpctl",
-            "pages": []
+            "pages": [
+              "ko/frpctl/overview"
+            ]
           },
           {
             "group": "배포",
-            "pages": []
+            "pages": [
+              "ko/deployment/firewall-nat"
+            ]
           },
           {
             "group": "운영 & 문제 해결",
