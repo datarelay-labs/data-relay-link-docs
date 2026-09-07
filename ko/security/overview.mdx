@@ -1,0 +1,41 @@
+---
+title: "보안 개요"
+description: "등록 신뢰, CLIENT ID, credential과 관리 경계를 이해합니다"
+---
+
+# 보안 개요
+
+FRP Auto Deploy의 관리 plane은 **HTTPS only**를 기준으로 하고 실패 시 보수적으로 동작하도록 설계되어 있습니다.
+
+## 핵심 원칙
+
+- FRP control/data 터널 인증과 관리 API 자격 증명은 서로 다른 역할입니다.
+- 최초 등록은 Enrollment Code 또는 Bootstrap Ticket을 사용합니다.
+- 등록 후 클라이언트는 persistent management identity를 사용합니다.
+- CLIENT ID는 hostname/IP와 분리된 식별자입니다.
+- Zero-Touch 명령은 사용/만료/취소 전까지 민감하게 취급합니다.
+- `show`, help, Tab completion, 일반 status 화면은 enrollment secret을 노출하지 않아야 합니다.
+
+## Private CA
+
+서버는 프로젝트용 private CA를 유지합니다. 클라이언트는 최초 등록 과정에서 전달된 CA SHA256 fingerprint를 검증하고 이후 관리 통신에서 저장된 CA를 사용합니다.
+
+## FRP token
+
+FRP token은 FRP tunnel 인증용입니다. Enrollment Code나 management API credential과 같은 것이 아닙니다.
+
+## 운영자가 보호해야 하는 것
+
+- 서버 private CA key
+- FRP server token
+- 유효한 Enrollment Code / Zero-Touch ticket
+- 클라이언트 management private key
+- 서버 registry 및 신뢰 상태 백업
+
+## 책임 경계
+
+서버 또는 클라이언트의 local root가 완전히 침해된 상황은 보호 경계 밖입니다. 파일 권한과 credential 분리는 우발적 노출과 일반적인 원격 공격 표면을 줄이지만 root compromise 자체를 해결하지는 않습니다.
+
+<Warning>
+운영 문제를 해결하기 위해 TLS 검증을 끄거나 `curl -k`를 정상 설치/운영 절차로 사용하지 마세요.
+</Warning>

@@ -5,19 +5,16 @@ description: "Install the server, enroll a client, and publish your first SSH se
 
 # Quick Start
 
-This guide uses the current stable release, **v2.1.2**.
+This guide uses the current stable release, **v2.1.2**, and takes you from an empty Linux server to a working remote SSH connection.
 
-## 1. Install the server
+## Before you start
 
-On a supported Linux server with a public entry point:
+You need:
 
-```bash
-curl -fsSL \
-  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
-  | sudo bash
-```
-
-The interactive installer asks for the server public endpoint, optional public hostname, internal IP, deployment mode, and port settings.
+- one supported Linux/systemd server that remote clients can reach
+- one Linux/systemd client to enroll
+- an SSH account that already exists on the client
+- the required firewall/NAT rules for the server deployment
 
 For the default Direct deployment, the usual public inbound TCP requirements are:
 
@@ -27,7 +24,23 @@ For the default Direct deployment, the usual public inbound TCP requirements are
 6000-6098   Published services
 ```
 
-FRP Auto Deploy does not automatically change your external firewall, cloud security group, or NAT rules.
+<Warning>
+  FRP Auto Deploy does not automatically change an external firewall, cloud security group, NAT rule, UFW, firewalld, or iptables policy.
+</Warning>
+
+## 1. Install the server
+
+On the Linux server:
+
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+The interactive installer asks for the public endpoint, optional published-service hostname, internal IP, deployment mode, and port settings.
+
+If the server is behind a firewall/NAT device, read [Firewall & NAT](/deployment/firewall-nat) before accepting port assumptions.
 
 ## 2. Verify the server
 
@@ -38,6 +51,10 @@ sudo frpctl doctor
 ```
 
 `doctor` is read-only and is the preferred first diagnostic command.
+
+<Check>
+  Continue only after the expected server services are active and `doctor` does not report a blocking configuration error.
+</Check>
 
 ## 3. Create a Zero-Touch SSH enrollment
 
@@ -51,13 +68,30 @@ sudo frpctl create enrollment \
   --label branch-a
 ```
 
-Replace `aella` with an SSH user that already exists on the remote client.
+Replace `aella` with an SSH user that **already exists on the remote client**.
 
-FRP Auto Deploy does not create OS users, install an SSH server, change passwords, or manage SSH keys.
+FRP Auto Deploy does not create OS users, install or configure an SSH server, change passwords, or manage SSH keys.
 
-The server prints a one-time bootstrap command. Send that command securely to the remote operator and run it once on the client.
+The server prints a one-time bootstrap command. Treat the complete command as short-lived sensitive material and send it to the remote operator through an appropriate private channel.
 
-## 4. Confirm registration
+## 4. Run the generated command on the client
+
+On the remote Linux client, run the **exact command printed by the server** once.
+
+After installation, verify locally:
+
+```bash
+sudo frpctl show status
+sudo frpctl show services
+sudo frpctl show info
+sudo frpctl doctor
+```
+
+<Check>
+  The client should show the enrolled service and a healthy FRP client state.
+</Check>
+
+## 5. Confirm registration on the server
 
 Back on the server:
 
@@ -66,27 +100,47 @@ sudo frpctl show clients
 sudo frpctl show enrollments
 ```
 
-The enrolled machine receives a persistent CLIENT ID and its published SSH service receives an assigned public port.
+The enrolled machine receives a persistent CLIENT ID and its SSH service receives an assigned public service port.
 
-## 5. Connect
+For more detail:
 
-Example:
+```bash
+sudo frpctl show client <CLIENT-ID>
+sudo frpctl show client <CLIENT-ID> services
+```
+
+## 6. Connect over SSH
 
 ```bash
 ssh -p <public-port> aella@<FRP-server-public-IP>
 ```
 
-If you have configured an optional published-service hostname, you can use it instead of the IP:
+If you configured an optional published-service hostname:
 
 ```bash
 ssh -p <public-port> aella@fw.example.com
 ```
 
-The IP remains the infrastructure fallback.
+The server public IP remains the infrastructure fallback.
+
+## Success checklist
+
+You are finished when all of the following are true:
+
+- `show clients` lists the client with a CLIENT ID
+- the SSH service has a public service port
+- the client reports healthy state
+- the server's published service port is reachable through the external firewall/NAT
+- `ssh -p <public-port> ...` reaches the intended client SSH service
+
+## If it does not work
+
+Start with [Troubleshooting](/troubleshooting/overview) and `frpctl doctor` on both server and client. Avoid manually editing registry, identity, or generated FRP files as a first response.
 
 ## Next steps
 
-- [Deployment Modes](/deployment/modes)
-- [Client Enrollment](/guides/enrollment)
+- [Linux Client](/getting-started/linux-client)
+- [Zero-Touch Enrollment](/guides/zero-touch)
 - [Publishing Services](/guides/services)
+- [Deployment Modes](/deployment/modes)
 - [`frpctl` Guide](/frpctl/overview)

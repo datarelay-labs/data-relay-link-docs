@@ -1,0 +1,81 @@
+---
+title: "서비스 게시"
+description: "SSH, HTTP, HTTPS, Custom TCP와 LAN 서비스를 게시하는 방법"
+---
+
+# 서비스 게시
+
+한 클라이언트는 하나 이상의 TCP 서비스를 게시할 수 있습니다.
+
+## SSH
+
+일반적인 타깃:
+
+```text
+127.0.0.1:22
+```
+
+접속 예:
+
+```bash
+ssh -p <public-port> user@<server-public-IP-or-hostname>
+```
+
+## HTTP
+
+```text
+127.0.0.1:80
+```
+
+또는 클라이언트가 접근 가능한 다른 LAN 호스트:
+
+```text
+10.10.20.40:80
+```
+
+## HTTPS
+
+HTTPS는 **TCP passthrough**입니다. FRP Auto Deploy가 애플리케이션 TLS를 종료하거나 인증서를 교체하지 않습니다.
+
+```text
+127.0.0.1:443
+```
+
+DNS hostname으로 접속시키려면 실제 애플리케이션 인증서가 그 hostname에 유효해야 합니다.
+
+## Custom TCP
+
+예:
+
+```text
+Grafana      127.0.0.1:3000
+API          10.10.20.20:8080
+PostgreSQL   10.10.20.30:5432
+```
+
+## 클라이언트를 LAN 게이트웨이로 사용
+
+클라이언트 자신이 아니라 같은 내부망의 다른 서버 서비스를 게시할 수 있습니다.
+
+```text
+Internet
+   |
+FRP Server:<public-port>
+   |
+FRP Client
+   |
+10.10.20.30:22
+```
+
+클라이언트가 해당 내부 호스트에 정상 IP 연결만 할 수 있으면 됩니다.
+
+## 수명주기
+
+```text
+Disable  -> 게시 중지, 공개 포트 예약 유지
+Enable   -> 같은 공개 포트로 재개
+Edit     -> 타깃 변경, 예약 유지
+Release  -> 공개 포트 예약 반환
+```
+
+`disable`, `release`, `revoke`는 서로 다른 동작입니다.

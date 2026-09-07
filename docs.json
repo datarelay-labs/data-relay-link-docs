@@ -32,62 +32,115 @@
     "timestamp": true
   },
   "navigation": {
-    "groups": [
+    "languages": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "getting-started/overview",
-          "getting-started/quickstart",
-          "getting-started/server-installation",
-          "getting-started/linux-client"
+        "language": "en",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "getting-started/overview",
+              "getting-started/quickstart",
+              "getting-started/server-installation",
+              "getting-started/linux-client"
+            ],
+            "icon": "rocket"
+          },
+          {
+            "group": "Client & Services",
+            "pages": [
+              "guides/enrollment",
+              "guides/zero-touch",
+              "guides/services",
+              "guides/ssh",
+              "guides/http-https",
+              "guides/custom-tcp-lan"
+            ],
+            "icon": "network-wired"
+          },
+          {
+            "group": "frpctl",
+            "pages": [
+              "frpctl/overview",
+              "frpctl/cli-reference"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/modes",
+              "deployment/firewall-nat",
+              "deployment/dns-hostname"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "operations/maintenance",
+              "operations/updates",
+              "operations/backup-restore",
+              "operations/diagnostics",
+              "operations/lifecycle",
+              "troubleshooting/overview"
+            ]
+          },
+          {
+            "group": "Security & Reference",
+            "pages": [
+              "security/overview",
+              "reference/platforms",
+              "reference/network-ports",
+              "reference/release-status",
+              "reference/limitations"
+            ]
+          }
         ]
       },
       {
-        "group": "Client & Services",
-        "pages": [
-          "guides/enrollment",
-          "guides/zero-touch",
-          "guides/services",
-          "guides/ssh",
-          "guides/http-https",
-          "guides/custom-tcp-lan"
-        ]
-      },
-      {
-        "group": "frpctl",
-        "pages": [
-          "frpctl/overview",
-          "frpctl/cli-reference"
-        ]
-      },
-      {
-        "group": "Deployment",
-        "pages": [
-          "deployment/modes",
-          "deployment/firewall-nat",
-          "deployment/dns-hostname"
-        ]
-      },
-      {
-        "group": "Operations",
-        "pages": [
-          "operations/maintenance",
-          "operations/updates",
-          "operations/backup-restore",
-          "operations/diagnostics",
-          "operations/lifecycle",
-          "troubleshooting/overview"
-        ]
-      },
-      {
-        "group": "Security & Reference",
-        "pages": [
-          "security/overview",
-          "reference/platforms",
-          "reference/network-ports",
-          "reference/release-status",
-          "reference/limitations"
+        "language": "ko",
+        "groups": [
+          {
+            "group": "시작하기",
+            "pages": [
+              "ko/index",
+              "ko/getting-started/quickstart",
+              "ko/getting-started/server-installation",
+              "ko/getting-started/linux-client"
+            ]
+          },
+          {
+            "group": "클라이언트 & 서비스",
+            "pages": [
+              "ko/guides/zero-touch",
+              "ko/guides/services"
+            ]
+          },
+          {
+            "group": "frpctl",
+            "pages": [
+              "ko/frpctl/overview"
+            ]
+          },
+          {
+            "group": "배포",
+            "pages": [
+              "ko/deployment/firewall-nat"
+            ]
+          },
+          {
+            "group": "운영 & 문제 해결",
+            "pages": [
+              "ko/operations/troubleshooting"
+            ]
+          },
+          {
+            "group": "보안 & 참고",
+            "pages": [
+              "ko/reference/platforms",
+              "ko/security/overview"
+            ]
+          }
         ]
       }
     ]

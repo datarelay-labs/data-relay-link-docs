@@ -1,0 +1,82 @@
+---
+title: "frpctl 사용법"
+description: "FRP Auto Deploy의 기본 운영 CLI 사용법"
+---
+
+# frpctl 사용법
+
+일상 운영에서는 다음 하나만 기억하면 됩니다.
+
+```bash
+sudo frpctl
+```
+
+## 기본 키
+
+```text
+Tab   현재 위치에서 가능한 명령 표시/완성
+?     현재 문맥 도움말
+help  전체 도움말
+↑/↓   현재 세션 히스토리
+menu  번호 기반 안내 메뉴
+exit  종료
+```
+
+기본 문법:
+
+```text
+<verb> <resource> [target] [property] [value]
+```
+
+## 서버에서 자주 쓰는 명령
+
+```text
+show status
+show version
+show clients
+show client <ID>
+show enrollments
+show audit
+
+create enrollment
+create enrollment --one-line --ssh --ssh-user aella --label branch-a
+create backup
+
+set client <ID> label <value>
+set client <ID> note <value>
+
+revoke client <ID>
+release client <ID>
+
+doctor
+```
+
+## 클라이언트에서 자주 쓰는 명령
+
+```text
+show status
+show services
+show info
+
+add service
+set service <service-id> target-host <host>
+set service <service-id> target-port <port>
+apply
+discard
+
+doctor
+```
+
+## CLIENT ID
+
+서버가 클라이언트를 식별하는 기준은 immutable **CLIENT ID**입니다. label이나 hostname을 바꿔도 CLIENT ID는 바뀌지 않습니다.
+
+## 중요한 구분
+
+```text
+revoke  != release
+disable != release
+purge   != revoke
+```
+
+각 명령은 보안 수명주기, 게시 상태, 포트 반환을 구분하기 위해 의도적으로 분리되어 있습니다.

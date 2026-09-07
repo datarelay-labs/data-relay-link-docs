@@ -1,0 +1,65 @@
+---
+title: "서버 설치"
+description: "FRP Auto Deploy 서버를 설치하기 전에 필요한 네트워크와 설치 절차"
+---
+
+# 서버 설치
+
+## 설치 전 체크리스트
+
+다음 항목을 먼저 준비하세요.
+
+- Linux/systemd 서버
+- 인터넷에서 도달 가능한 공인 진입점
+- Direct 기본 구성이라면 TCP `443`, `6099`, `6000-6098`
+- 서버가 NAT 뒤라면 외부 방화벽의 DNAT 규칙
+- 선택 사항: 게시 서비스용 DNS hostname
+
+<Warning>FRP Auto Deploy는 클라우드 보안 그룹, 외부 방화벽, NAT 규칙을 자동 생성하지 않습니다.</Warning>
+
+## Stable 버전 설치
+
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+인터랙티브 설치기는 공인 주소, 선택적 public hostname, 내부 IP, 배포 모드, control/enrollment/service 포트 등을 묻습니다.
+
+## Direct vs single-443
+
+**Direct**는 기본 모드입니다.
+
+```text
+TCP/443       FRP control
+TCP/6099      Enrollment / management HTTPS
+TCP/6000-6098 Published services
+```
+
+**Enterprise single-443**는 FRP control과 enrollment를 TCP/443 프런트엔드로 통합해야 하는 네트워크에서 사용합니다. 게시 서비스 포트 `6000-6098`은 그대로 필요합니다.
+
+## 설치 검증
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+정상이라면 필요한 systemd 서비스가 active이고 `doctor`가 심각한 구성 오류를 보고하지 않아야 합니다.
+
+## 보존해야 할 서버 상태
+
+```text
+/etc/frp-auto-deploy/config.json
+/etc/frp-auto-deploy/pki/
+/etc/frp/server_token
+/var/lib/frp-auto-deploy/registry.json
+```
+
+이 상태는 CLIENT ID, 신뢰, 토큰, 공개 포트 예약을 유지하는 데 중요합니다. 일반 운영 중 직접 편집하지 마세요.
+
+## 다음
+
+[빠른 시작](/ko/getting-started/quickstart)에서 첫 클라이언트를 등록하세요.

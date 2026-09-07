@@ -7,7 +7,11 @@ description: "Zero-Touch remote access management for systems behind NAT and fir
 
 **Secure remote access to systems behind NAT and firewalls — without VPNs, inbound client firewall changes, or hand-written FRP configuration.**
 
-FRP Auto Deploy is a lightweight deployment and operations layer built on the official `fatedier/frp` binaries. FRP remains the tunnel engine; FRP Auto Deploy adds secure enrollment, persistent client identity, service management, public-port allocation, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
+FRP Auto Deploy keeps the official `fatedier/frp` binaries as the tunnel engine and adds the operational layer around them: secure enrollment, persistent client identity, service publishing, public-port allocation, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
+
+<Note>
+  Designed for a few to a few dozen systems. It is intentionally not a 100+ node fleet-orchestration platform.
+</Note>
 
 ## The basic idea
 
@@ -32,7 +36,35 @@ FRP Auto Deploy is a lightweight deployment and operations layer built on the of
         SSH / HTTPS / TCP                  SSH / HTTP / TCP
 ```
 
-The remote client initiates the connection toward the FRP server. In normal deployments the client does not need its own public IP, inbound NAT rule, or inbound firewall opening for the published service.
+The remote client initiates the connection toward the FRP server. In normal deployments, the client does not need its own public IP, an inbound NAT rule, or an inbound firewall opening for the published service.
+
+## Choose your path
+
+<CardGroup cols={2}>
+  <Card title="I want the fastest first connection" icon="rocket" href="/getting-started/quickstart">
+    Install one server, issue a Zero-Touch command, and connect to SSH.
+  </Card>
+
+  <Card title="I am deploying the server" icon="server" href="/getting-started/server-installation">
+    Review ports, deployment modes, firewall responsibilities, and installation checks.
+  </Card>
+
+  <Card title="I am onboarding a remote Linux host" icon="laptop" href="/getting-started/linux-client">
+    Choose Zero-Touch or manual enrollment and verify the client.
+  </Card>
+
+  <Card title="I need to publish an application" icon="network-wired" href="/guides/services">
+    Publish SSH, HTTP, HTTPS passthrough, custom TCP, or another reachable LAN target.
+  </Card>
+
+  <Card title="I operate the environment" icon="terminal" href="/frpctl/overview">
+    Manage clients, services, enrollments, diagnostics, and lifecycle operations with `frpctl`.
+  </Card>
+
+  <Card title="My server is behind a firewall" icon="shield" href="/deployment/firewall-nat">
+    Configure DNAT correctly and keep public service-port reservations understandable.
+  </Card>
+</CardGroup>
 
 ## What it gives you
 
@@ -42,11 +74,31 @@ The remote client initiates the connection toward the FRP server. In normal depl
 - Multiple services per client
 - Access to LAN services reachable from the client
 - Persistent public service-port reservations
-- Clear disable / release / revoke lifecycle semantics
+- Clear `disable`, `release`, and `revoke` lifecycle semantics
 - Read-only diagnostics with `frpctl doctor`
-- Backup / restore and controlled updates
+- Backup/restore and controlled updates
 - Direct and Enterprise single-443 deployment modes
 - Optional DNS hostname for user-friendly published-service access
+
+## Before you deploy
+
+<AccordionGroup>
+  <Accordion title="Do I need to change the remote client firewall?">
+    Normally no inbound rule is required on the remote client because the FRP client initiates the tunnel toward the public FRP server. The client still needs outbound connectivity to the configured server endpoints.
+  </Accordion>
+
+  <Accordion title="Does FRP Auto Deploy configure my cloud firewall or NAT?">
+    No. AWS Security Groups, OCI Security Lists, external firewalls, UFW/firewalld/iptables, and DNAT remain infrastructure responsibilities.
+  </Accordion>
+
+  <Accordion title="Does HTTPS terminate on FRP Auto Deploy?">
+    No. Published HTTPS is TCP passthrough. The target application remains responsible for the certificate presented to end users.
+  </Accordion>
+
+  <Accordion title="Can one client publish services on other LAN hosts?">
+    Yes. A client can act as a small gateway for TCP services on other hosts that it can reach normally over the LAN.
+  </Accordion>
+</AccordionGroup>
 
 ## Current stable baseline
 
@@ -60,27 +112,8 @@ The remote client initiates the connection toward the FRP server. In normal depl
 
 Windows and macOS client automation are development targets, but they are **not stable-supported in the current stable release**.
 
-## Start here
-
-<CardGroup cols={2}>
-  <Card title="Quick Start" icon="rocket" href="/getting-started/quickstart">
-    Install the server, enroll a client, and publish your first SSH service.
-  </Card>
-  <Card title="Server Installation" icon="server" href="/getting-started/server-installation">
-    Install and verify the current stable server release.
-  </Card>
-  <Card title="Client Enrollment" icon="key" href="/guides/enrollment">
-    Use Zero-Touch or a manual Enrollment Code.
-  </Card>
-  <Card title="Publish Services" icon="network-wired" href="/guides/services">
-    Publish SSH, HTTP, HTTPS, custom TCP, and reachable LAN services.
-  </Card>
-  <Card title="frpctl" icon="terminal" href="/frpctl/overview">
-    Manage clients, services, enrollments, lifecycle, and diagnostics.
-  </Card>
-  <Card title="Firewall & NAT" icon="shield" href="/deployment/firewall-nat">
-    Understand ports, DNAT, and the network responsibility boundary.
-  </Card>
-</CardGroup>
+<Tip>
+  If you are new to the product, start with the [Quick Start](/getting-started/quickstart). If something does not work, use [Troubleshooting](/troubleshooting/overview) before editing generated state manually.
+</Tip>
 
 > This site is user documentation. Internal roadmap, release-engineering gates, and product-development notes are intentionally kept separate from operational guides.
