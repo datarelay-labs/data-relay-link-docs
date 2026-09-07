@@ -1,0 +1,48 @@
+---
+title: "Diagnostics"
+description: "Use frpctl status and doctor to diagnose server, client, PKI, registry, and network problems safely."
+---
+
+# Diagnostics
+
+Start troubleshooting with read-only checks before making manual changes.
+
+## Server checks
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl show clients
+sudo frpctl show enrollments
+sudo frpctl doctor
+```
+
+## Client checks
+
+```bash
+sudo frpctl show status
+sudo frpctl show services
+sudo frpctl show info
+sudo frpctl doctor
+```
+
+## What `doctor` checks
+
+`doctor` is read-only. It can surface problems involving:
+
+- installation state and expected files
+- permissions and secret file modes
+- PKI and CA trust
+- systemd service state
+- FRP configuration and transport
+- allocator/enrollment reachability
+- registry and client-state consistency
+- deployment topology and common network failures
+
+## Avoid destructive debugging
+
+Do not immediately edit generated `frps.toml`, `frpc.toml`, registry files, client identity files, or PKI material. Those are generated or authoritative state and manual edits can make recovery harder.
+
+If TCP connects but TLS is reset in an enterprise network, review [Deployment Modes](/deployment/modes) rather than disabling TLS verification.
+
+If the FRP server sits behind a firewall/NAT device, also verify [Firewall & NAT](/deployment/firewall-nat) and [Network Ports](/reference/network-ports).
