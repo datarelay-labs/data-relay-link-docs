@@ -1,0 +1,52 @@
+---
+title: "Updates"
+description: "Update FRP Auto Deploy safely while preserving identity, trust, and persistent public ports."
+---
+
+# Updates
+
+FRP Auto Deploy separates project updates from upstream FRP binary updates.
+
+## Project update
+
+Check first:
+
+```bash
+sudo frpctl update project --check
+```
+
+Then update:
+
+```bash
+sudo frpctl update project
+```
+
+Normal project updates are designed to preserve:
+
+- client identity
+- the project private CA
+- the FRP token
+- registry state
+- enrollment state where applicable
+- persistent public service-port reservations
+
+A normal update does not require client re-enrollment.
+
+## Stable release vs development `main`
+
+The current published stable release is **v2.1.2**. The source repository `main` branch currently identifies itself as **2.1.3** and is a development channel until an immutable release tag is published.
+
+Use immutable release tags for field installations unless you intentionally opt into development behavior.
+
+## FRP binary update
+
+```bash
+sudo frpctl show upstream
+sudo frpctl update frp --check
+```
+
+`show upstream` is informational. FRP Auto Deploy does not automatically adopt the newest upstream FRP version. The project remains pinned to the version that has been tested, currently **v0.70.1**.
+
+## Same-version refreshes
+
+Update decisions are not based only on the visible project version string. Verified release metadata and bundle SHA256 are used so a changed build can be recognized even when the project version did not change.
