@@ -1,0 +1,75 @@
+---
+title: "백업 & 복구"
+sidebarTitle: "백업 & 복구"
+description: "CLIENT ID, private CA, registry와 persistent public-port reservation을 보존하기 위한 백업/복구 절차입니다."
+icon: "database"
+---
+
+# 백업 & 복구
+
+FRP Auto Deploy 서버는 단순 설정 파일만이 아니라 **신뢰와 식별 상태**를 보관합니다. 따라서 서버 장애 대비에서 백업은 매우 중요합니다.
+
+## 무엇을 보호하나요?
+
+```mermaid
+flowchart TB
+    B[Backup] --> C[config.json]
+    B --> P[Private CA / PKI]
+    B --> T[FRP server token]
+    B --> R[registry.json]
+    R --> I[CLIENT ID]
+    R --> S[Service records]
+    S --> PP[Persistent public-port reservations]
+```
+
+최소 핵심 상태는 다음과 같습니다.
+
+```text
+/etc/frp-auto-deploy/config.json
+/etc/frp-auto-deploy/pki/
+/etc/frp/server_token
+/var/lib/frp-auto-deploy/registry.json
+```
+
+## 백업 생성
+
+```bash
+sudo frpctl create backup
+```
+
+백업 파일은 private key와 token 같은 민감한 정보를 포함할 수 있으므로 안전한 위치에 저장하세요.
+
+## 복구
+
+```bash
+sudo frpctl restore backup <path>
+```
+
+지원되는 restore는 단순 파일 복사가 아닙니다. Archive 검증, 현재 상태 snapshot, restore, 서비스 재시작, health check를 포함해 일관성이 깨지는 경우 보수적으로 실패하도록 설계되어 있습니다.
+
+## 왜 CA가 중요한가요?
+
+```mermaid
+sequenceDiagram
+    participant S as Server CA
+    participant C as Existing Client
+    participant M as Management HTTPS
+    C->>S: 최초 등록에서 CA trust 설정
+    C->>M: 이후 저장된 CA로 서버 검증
+```
+
+기존 Client는 Project private CA를 신뢰합니다. CA private key를 잃어버리면 기존 trust 관계를 그대로 재현하기 어려울 수 있습니다.
+
+## 복구 후 검증
+
+```bash
+sudo frpctl show status
+sudo frpctl show clients
+sudo frpctl doctor
+```
+
+그 다음 대표 published service를 **실제 public host/public port**에서 테스트하세요.
+
+<Warning>
+  Disaster recovery를 준비하려면 backup 파일이 실제로 복구 가능한지도 별도 테스트 환경에서 주기적으로 검증하는 것이 좋습니다.
+</Warning>

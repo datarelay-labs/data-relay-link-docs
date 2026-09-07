@@ -149,7 +149,9 @@
           {
             "group": "운영 & 문제 해결",
             "pages": [
+              "ko/operations/overview",
               "ko/operations/diagnostics",
+              "ko/operations/backup-restore",
               "ko/operations/lifecycle",
               "ko/operations/updates",
               "ko/operations/troubleshooting"
