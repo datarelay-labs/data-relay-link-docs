@@ -1,0 +1,71 @@
+---
+title: "Deployment Modes"
+description: "Choose between Direct and Enterprise single-443 deployments."
+---
+
+# Deployment Modes
+
+FRP Auto Deploy has two server deployment modes.
+
+## Direct mode
+
+Direct is the default.
+
+```text
+Internet
+   |
+   +-- TCP/443        FRP control
+   +-- TCP/6099       Enrollment / management HTTPS
+   +-- TCP/6000-6098  Published services
+```
+
+Use Direct when the network allows the FRP control connection and enrollment HTTPS on their normal public ports.
+
+## Enterprise single-443
+
+Use single-443 when a corporate network strongly prefers TLS on TCP/443 or interferes with TLS on non-standard ports.
+
+```text
+Internet
+   |
+   +-- TCP/443
+   |     +-- Enrollment / management HTTPS
+   |     +-- FRP control over WSS
+   |
+   +-- TCP/6000-6098  Published services
+```
+
+Internally, the allocator and FRP control backend remain on loopback-only ports. Those backend ports must not be exposed to the Internet.
+
+## NAT is not a deployment mode
+
+The FRP server itself may sit behind a firewall or NAT device. That is a network topology, not a third product mode.
+
+For example:
+
+```text
+Internet
+   |
+203.0.113.10
+Firewall / NAT
+   |
+192.0.2.50
+FRP Auto Deploy Server
+```
+
+The firewall can translate the public control and enrollment ports to the server's internal listen ports. Published service ports are designed to keep the same public/internal service port number.
+
+## Firewall responsibility
+
+The installer does not configure OCI Security Lists, AWS Security Groups, external NAT, UFW, firewalld, or iptables. Open only the ports required by the selected deployment.
+
+## Switching modes
+
+Changing Direct ↔ single-443 is a maintenance-window cutover, not a zero-downtime change. Existing identity, CA, token, registry, and port reservations are designed to be preserved, but clients must use a compatible transport configuration after the cutover.
+
+Run the health checks after a change:
+
+```bash
+sudo frpctl show status
+sudo frpctl doctor
+```
