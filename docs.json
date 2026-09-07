@@ -164,6 +164,8 @@
               "ko/reference/platforms",
               "ko/reference/architecture",
               "ko/security/overview",
+              "ko/reference/network-ports",
+              "ko/reference/release-status",
               "ko/reference/glossary"
             ],
             "icon": "shield-halved"
