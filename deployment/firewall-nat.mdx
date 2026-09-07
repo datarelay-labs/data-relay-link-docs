@@ -1,0 +1,68 @@
+---
+title: "Firewall & NAT"
+description: "Deploy the FRP Auto Deploy server directly on the Internet or behind a firewall with DNAT."
+---
+
+# Firewall & NAT
+
+NAT is a network topology, not a separate FRP Auto Deploy deployment mode. A Direct-mode server can have its own public IP or can sit behind an external firewall/NAT device.
+
+## Direct server with a public IP
+
+Typical inbound TCP requirements:
+
+```text
+443         FRP control
+6099        Enrollment / management HTTPS
+6000-6098   Published services
+```
+
+## Server behind a firewall
+
+Example topology:
+
+```text
+Internet
+   |
+203.0.113.10
+Firewall / NAT
+   |
+192.0.2.50
+FRP Auto Deploy Server
+```
+
+A typical mapping can keep published service ports 1:1 while translating the control and enrollment ports if required:
+
+```text
+203.0.113.10:8443       -> 192.0.2.50:443
+203.0.113.10:9443       -> 192.0.2.50:6099
+203.0.113.10:6000-6098  -> 192.0.2.50:6000-6098
+```
+
+Clients must use the **public** endpoints, not the private server address.
+
+## Published service ports
+
+For the normal product model, keep a published service port the same on the public and internal sides whenever possible:
+
+```text
+Public 6001 -> Internal 6001
+```
+
+Changing a service to a different external port can make the product's persistent public-port reservation differ from the Internet-facing endpoint, which is harder to operate and document.
+
+## Responsibility boundary
+
+FRP Auto Deploy does not automatically configure:
+
+- AWS Security Groups
+- OCI Security Lists
+- external firewalls or NAT rules
+- UFW, firewalld, or iptables
+- customer SSH accounts or SSH keys
+
+Configure those controls explicitly in the infrastructure that owns them.
+
+## Hairpin NAT
+
+If an internal user tries to reach the server through its public hostname and public IP, success depends on the firewall's hairpin NAT behavior. If the firewall does not support it, use hairpin NAT configuration or split DNS.

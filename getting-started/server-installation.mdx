@@ -1,0 +1,68 @@
+---
+title: "Server Installation"
+description: "Install and verify the FRP Auto Deploy server using the current stable release."
+---
+
+# Server Installation
+
+FRP Auto Deploy uses a Linux server as the public entry point. The server runs the official FRP server binary plus the enrollment, registry, lifecycle, and `frpctl` management layer.
+
+## Before you start
+
+Prepare a Linux server that remote clients can reach over the Internet. The server can have a public IP directly or sit behind a firewall/NAT device that forwards the required ports.
+
+FRP Auto Deploy does **not** automatically modify cloud security groups, external firewalls, NAT rules, UFW, firewalld, or iptables.
+
+## Install the current stable release
+
+The current published stable release is **v2.1.2**. Use the immutable release tag rather than mutable `main` for field installations.
+
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+The interactive installer asks for the public endpoint, optional public hostname, internal server IP, deployment mode, and port settings.
+
+## Direct mode defaults
+
+For the default Direct deployment, the usual public TCP endpoints are:
+
+```text
+443         FRP control
+6099        Enrollment / management HTTPS
+6000-6098   Published client services
+```
+
+TCP/22 is optional and is only for your own administrative SSH access to the FRP server.
+
+## Verify the installation
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+`doctor` is read-only. It checks installation state, configuration, PKI, service state, registry consistency, topology, and common network problems without changing state.
+
+## Important state
+
+Server state is intentionally persistent across normal reinstall/update workflows. Important locations include:
+
+```text
+/etc/frp-auto-deploy/config.json
+/etc/frp-auto-deploy/pki/
+/etc/frp/server_token
+/var/lib/frp-auto-deploy/registry.json
+```
+
+Do not manually edit registry or identity state during normal operations.
+
+## Next
+
+- [Quick Start](/getting-started/quickstart)
+- [Deployment Modes](/deployment/modes)
+- [Firewall & NAT](/deployment/firewall-nat)
+- [Client Enrollment](/guides/enrollment)

@@ -1,64 +1,86 @@
 ---
 title: "FRP Auto Deploy"
-description: "Zero-Touch Remote Access for servers behind NAT and firewalls"
+description: "Zero-Touch remote access management for systems behind NAT and firewalls"
 ---
 
 # FRP Auto Deploy
 
 **Secure remote access to systems behind NAT and firewalls — without VPNs, inbound client firewall changes, or hand-written FRP configuration.**
 
-FRP Auto Deploy is a lightweight deployment and operations layer built on the official `fatedier/frp` binaries. It keeps FRP as the tunnel engine and adds secure enrollment, persistent client identity, service management, public-port allocation, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
+FRP Auto Deploy is a lightweight deployment and operations layer built on the official `fatedier/frp` binaries. FRP remains the tunnel engine; FRP Auto Deploy adds secure enrollment, persistent client identity, service management, public-port allocation, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
 
-## What you can do
-
-- Connect remote Linux systems that sit behind NAT or a firewall
-- Publish SSH, HTTP, HTTPS passthrough, and custom TCP services
-- Publish services running on the client itself or on other LAN hosts reachable from that client
-- Enroll clients with a server-generated Zero-Touch command
-- Keep client identity and public service ports stable across normal updates and reboots
-- Manage daily operations through `sudo frpctl`
-- Run either the default Direct deployment or the optional Enterprise single-443 mode
-
-## How it works
+## The basic idea
 
 ```text
-Internet / Operator
-        |
-        v
-+-----------------------+
-| FRP Auto Deploy       |
-| Server / Public entry |
-+-----------+-----------+
-            ^
-            | outbound FRP control tunnel
-            |
-   +--------+--------+
-   |                 |
-   v                 v
-Client A           Client B
-behind NAT         behind NAT
-   |                 |
-SSH / HTTPS       LAN SSH / HTTP
+                       Internet / Operator
+                               |
+                               v
+                    +-----------------------+
+                    | FRP Auto Deploy       |
+                    | Server / Public entry |
+                    +-----------+-----------+
+                                ^
+                                | outbound FRP tunnel
+               +----------------+----------------+
+               |                                 |
+        +------+-------+                  +------+-------+
+        | Client A     |                  | Client B     |
+        | behind NAT   |                  | behind NAT   |
+        +------+-------+                  +------+-------+
+               |                                 |
+       localhost services                 reachable LAN hosts
+        SSH / HTTPS / TCP                  SSH / HTTP / TCP
 ```
 
-The remote client initiates the connection toward the FRP server. In normal deployments, the client does not need its own public IP, inbound NAT rule, or inbound firewall opening for the published service.
+The remote client initiates the connection toward the FRP server. In normal deployments the client does not need its own public IP, inbound NAT rule, or inbound firewall opening for the published service.
 
-## Current release
+## What it gives you
 
-- **Stable project release:** v2.1.2
-- **Pinned and tested FRP:** v0.70.1
-- **Primary stable client scope:** Linux/systemd
-- **Default deployment mode:** Direct
-- **Optional deployment mode:** Enterprise single-443
+- Zero-Touch or manual client enrollment
+- Stable CLIENT ID independent of hostname/IP changes
+- SSH, HTTP, HTTPS passthrough, and custom TCP publishing
+- Multiple services per client
+- Access to LAN services reachable from the client
+- Persistent public service-port reservations
+- Clear disable / release / revoke lifecycle semantics
+- Read-only diagnostics with `frpctl doctor`
+- Backup / restore and controlled updates
+- Direct and Enterprise single-443 deployment modes
+- Optional DNS hostname for user-friendly published-service access
 
-Windows and macOS client automation are development targets, but they are **not stable-supported in v2.1.2**.
+## Current stable baseline
+
+| Item | Current |
+| --- | --- |
+| Stable project release | **v2.1.2** |
+| Project version on `main` | **2.1.3** |
+| Pinned / tested FRP | **v0.70.1** |
+| Stable client scope | **Linux/systemd** |
+| Default deployment | **Direct** |
+
+Windows and macOS client automation are development targets, but they are **not stable-supported in the current stable release**.
 
 ## Start here
 
-1. Read [What is FRP Auto Deploy?](/getting-started/overview)
-2. Follow the [Quick Start](/getting-started/quickstart)
-3. Choose the right [Deployment Mode](/deployment/modes)
-4. Learn [Client Enrollment](/guides/enrollment) and [Publishing Services](/guides/services)
-5. Use the [`frpctl` Guide](/frpctl/overview) for daily administration
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/getting-started/quickstart">
+    Install the server, enroll a client, and publish your first SSH service.
+  </Card>
+  <Card title="Server Installation" icon="server" href="/getting-started/server-installation">
+    Install and verify the current stable server release.
+  </Card>
+  <Card title="Client Enrollment" icon="key" href="/guides/enrollment">
+    Use Zero-Touch or a manual Enrollment Code.
+  </Card>
+  <Card title="Publish Services" icon="network-wired" href="/guides/services">
+    Publish SSH, HTTP, HTTPS, custom TCP, and reachable LAN services.
+  </Card>
+  <Card title="frpctl" icon="terminal" href="/frpctl/overview">
+    Manage clients, services, enrollments, lifecycle, and diagnostics.
+  </Card>
+  <Card title="Firewall & NAT" icon="shield" href="/deployment/firewall-nat">
+    Understand ports, DNAT, and the network responsibility boundary.
+  </Card>
+</CardGroup>
 
-> This site is user documentation. Internal product-roadmap and release-engineering details are intentionally kept separate from the operational guides.
+> This site is user documentation. Internal roadmap, release-engineering gates, and product-development notes are intentionally kept separate from operational guides.

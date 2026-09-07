@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "FRP Auto Deploy",
-  "description": "Zero-Touch Remote Access for servers behind NAT and firewalls",
+  "description": "Lightweight Zero-Touch remote access management for systems behind NAT and firewalls.",
   "colors": {
     "primary": "#16A34A"
   },
@@ -13,27 +13,31 @@
         "pages": [
           "index",
           "getting-started/overview",
-          "getting-started/quickstart"
-        ]
-      },
-      {
-        "group": "Deployment",
-        "pages": [
-          "deployment/modes",
-          "deployment/dns-hostname"
+          "getting-started/quickstart",
+          "getting-started/server-installation"
         ]
       },
       {
         "group": "Client & Services",
         "pages": [
           "guides/enrollment",
+          "guides/zero-touch",
           "guides/services"
         ]
       },
       {
         "group": "frpctl",
         "pages": [
-          "frpctl/overview"
+          "frpctl/overview",
+          "frpctl/cli-reference"
+        ]
+      },
+      {
+        "group": "Deployment",
+        "pages": [
+          "deployment/modes",
+          "deployment/firewall-nat",
+          "deployment/dns-hostname"
         ]
       },
       {
@@ -47,7 +51,9 @@
         "group": "Security & Reference",
         "pages": [
           "security/overview",
-          "reference/platforms"
+          "reference/platforms",
+          "reference/network-ports",
+          "reference/release-status"
         ]
       }
     ]

@@ -1,0 +1,115 @@
+---
+title: "CLI Reference"
+description: "Canonical frpctl command grammar and everyday operator commands."
+---
+
+# CLI Reference
+
+`frpctl` is the primary operator interface. The canonical grammar is:
+
+```text
+<verb> <resource> [target] [property] [value]
+```
+
+The canonical client selector is the immutable **CLIENT ID**. Unique labels or hostnames may be accepted as typed shortcuts, but identity is not based on hostname or IP address.
+
+## Show
+
+```text
+show status
+show version
+show clients
+show client <ID>
+show client <ID> services
+show client <ID> tags
+show enrollments
+show audit
+show upstream
+show services
+show info
+```
+
+## Set and unset
+
+Server-side examples:
+
+```text
+set client <ID> label <value>
+set client <ID> note <value>
+set client <ID> tag <key> <value>
+unset client <ID> label
+unset client <ID> note
+unset client <ID> tag <key>
+set server hostname <fqdn>
+unset server hostname
+```
+
+Client-side service edits:
+
+```text
+set service <service-id> target-host <host>
+set service <service-id> target-port <port>
+set service <service-id> ssh-user <user>
+set service <service-id> name <value>
+```
+
+Service IDs are stable. Pending client-side changes become live after `apply`.
+
+## Create
+
+```text
+create zero-touch
+create enrollment [--one-line] [--ssh --ssh-user USER --label NAME]
+create enrollments --count N
+create enrollments --csv clients.csv
+create backup [path]
+add service [--preset ssh|http|https|custom] ...
+```
+
+## Service lifecycle
+
+```text
+enable service <service-id>
+disable service <service-id>
+apply
+discard
+```
+
+Disabling publication keeps the public port reservation. Re-enabling uses the same reserved port.
+
+## Revoke, purge, release, restore
+
+```text
+revoke client <ID>
+revoke enrollment <ID>
+purge enrollment <ID>
+purge enrollments --older-than <days>
+release service <ID> <service-id>
+release client <ID>
+restore backup <path>
+```
+
+The meanings are deliberately different:
+
+- **revoke** blocks management identity or an active enrollment credential
+- **release** returns a public port reservation
+- **purge** removes terminal enrollment metadata
+
+There is no `delete client` alias for these distinct operations.
+
+## Update and diagnostics
+
+```text
+update project [--check]
+update frp [--check]
+doctor
+help
+help show
+help set client
+?
+history
+clear
+exit
+```
+
+FRP itself remains pinned to the tested project version; `show upstream` is informational and does not automatically adopt the latest upstream FRP.
