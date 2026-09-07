@@ -1,0 +1,56 @@
+---
+title: "Updates, Backup & Doctor"
+description: "Maintain FRP Auto Deploy safely without losing identity or persistent public ports."
+---
+
+# Updates, Backup & Doctor
+
+FRP Auto Deploy separates project updates from upstream FRP updates.
+
+## Project update
+
+```bash
+sudo frpctl update project --check
+sudo frpctl update project
+```
+
+Normal project updates are designed to preserve client identity, the private CA, the FRP token, the registry, and public port reservations.
+
+## FRP update
+
+```bash
+sudo frpctl update frp --check
+sudo frpctl update frp
+```
+
+FRP is pinned and validated rather than automatically following the newest upstream version. The current stable project uses FRP **v0.70.1**.
+
+## Create a backup
+
+```bash
+sudo frpctl create backup
+```
+
+A server backup should protect the state required to preserve trust and reservations, including the project PKI, server token, configuration, and registry.
+
+## Restore
+
+```bash
+sudo frpctl restore backup <path>
+```
+
+Restore is not treated as a blind file copy. The product validates the archive, restores state, restarts services, runs diagnostics, and is designed to fail safely when restoration cannot be completed consistently.
+
+## Doctor
+
+```bash
+sudo frpctl doctor
+```
+
+`doctor` is read-only. Use it before making manual configuration changes.
+
+It can help identify installation, PKI, permissions, runtime services, topology, allocator, FRP, registry consistency, and network problems.
+
+## Preserve state
+
+Avoid manually editing generated or authoritative state files such as the client registry, `client-state.json`, generated FRP configuration, or management identity files unless you are performing a documented recovery procedure.
