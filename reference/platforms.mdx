@@ -1,0 +1,43 @@
+---
+title: "Supported Platforms"
+description: "Current stable platform scope and validation boundaries."
+---
+
+# Supported Platforms
+
+The current stable release is **FRP Auto Deploy v2.1.2** with pinned FRP **v0.70.1**.
+
+## Stable client scope
+
+The stable product scope is **Linux/systemd**.
+
+The project has validation coverage across several Linux families, but different environments may have different validation levels. A container test, systemd test, real-VM test, and field validation are not the same claim.
+
+Examples represented in the project's Linux validation work include:
+
+- Ubuntu / Debian families
+- Rocky Linux / RHEL-compatible families
+- AlmaLinux
+- Amazon Linux 2023
+- Amazon Linux 2
+
+## Windows and macOS
+
+Windows and macOS client automation are development targets, but they are **not stable-supported in v2.1.2**.
+
+Do not present successful lab or E2E experiments as stable field support until the release explicitly promotes those platforms.
+
+## Server scope
+
+The FRP Auto Deploy server is Linux-based. A Windows FRP server is not part of the current product scope.
+
+## Environment-specific considerations
+
+Some combinations require separate validation, for example:
+
+- SELinux Enforcing
+- Native ARM64 systemd environments
+- Older OpenSSL/system libraries
+- Real firewall/NAT topologies
+
+Use `sudo frpctl doctor` when validating a new environment.
