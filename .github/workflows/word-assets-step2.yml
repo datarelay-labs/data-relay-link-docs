@@ -12,13 +12,20 @@ permissions:
 
 jobs:
   materialize:
-    if: ${{ hashFiles('.asset-upload/READY') != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: docs/word-original-assets-step2b
+      - name: Stop until all chunks are staged
+        shell: bash
+        run: |
+          if [ ! -f .asset-upload/READY ]; then
+            echo 'READY marker not present yet; nothing to materialize.'
+            exit 0
+          fi
       - name: Rebuild original PNG assets
+        if: ${{ hashFiles('.asset-upload/READY') != '' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -30,6 +37,7 @@ jobs:
           echo 'a8f7f4caa1f9c4e3da8e0a666a2f0a83d2cf1239229909a76e8a1dff5abcb289  images/word-originals/oci/oci-internet-gateway.png' | sha256sum -c -
           echo '074b342fc455428dc0076092af4e5b304b0653f9fb249815ac18512c80513c08  images/word-originals/oci/oci-route-rule.png' | sha256sum -c -
       - name: Commit original PNG assets and remove staging files
+        if: ${{ hashFiles('.asset-upload/READY') != '' }}
         shell: bash
         run: |
           set -euo pipefail
