@@ -134,7 +134,37 @@ Target             frp-internet-gateway
 
 ![그림 10. VCN Subnets 탭에서 Create Subnet 선택](/images/oci/Picture10.png)
 
-다음 작업 단위에서 Word의 그림 11부터 이어서 Public Subnet 상세 설정과 Security List 화면을 배치합니다.
+### 2-5. Public Subnet 상세 설정
+
+Public Subnet은 다음 값으로 생성합니다.
+
+```text
+Name           frp-public-subnet
+Subnet Type    Regional
+IPv4 CIDR      10.0.0.0/24
+Route Table    Default Route Table for frp-vcn
+Subnet Access  Public Subnet
+```
+
+![그림 11. Public Subnet 설정](/images/oci/Picture11.png)
+
+### 2-6. Security List 설정
+
+생성한 VCN의 **Security Lists** 메뉴로 이동합니다.
+
+![그림 12. VCN Security Lists 메뉴](/images/oci/Picture12.png)
+
+**Default Security List**의 Ingress Rules를 확인합니다.
+
+![그림 13. Default Security List의 Ingress Rules](/images/oci/Picture13.png)
+
+FRP Auto Deploy single-443 기준으로 TCP 443과 Published Service 범위인 TCP 6000-6098을 추가합니다. SSH 22는 기존 관리용 규칙을 유지하되 가능하면 관리자 공인 IP `/32`로 제한합니다.
+
+![그림 14. Ingress Rule 추가 - TCP 443 및 TCP 6000-6098](/images/oci/Picture14.png)
+
+추가 후 Ingress Rule이 정상 반영되었는지 확인합니다.
+
+![그림 15. Ingress Rule 적용 결과](/images/oci/Picture15.png)
 
 ### single-443 권장 Ingress
 
@@ -163,23 +193,31 @@ Subnet         frp-public-subnet
 Boot volume    기본값
 ```
 
+Compute Instance를 만들기 전에 앞에서 생성한 VCN, Internet Gateway, Route, Public Subnet, Security List가 준비되어 있는지 확인한 뒤 **Compute → Instances**로 이동합니다.
+
+![그림 16. 생성한 네트워크 리소스 확인 후 Compute로 이동](/images/oci/Picture16.png)
+
 ### 3-1. Compute Instance 기본 정보
 
-먼저 **Create compute instance** 화면에서 이름과 placement를 확인합니다.
+**Create compute instance** 화면에서 이름과 placement를 확인합니다.
 
-![OCI Compute Instance 기본 정보](/images/oci/compute-basic.webp)
+![그림 17. Compute Instance 기본 정보](/images/oci/Picture17.png)
 
 ### 3-2. Canonical Ubuntu 24.04 선택
 
-**Change image**를 눌러 Canonical Ubuntu를 선택하고 Ubuntu 24.04 LTS x86_64 이미지를 선택합니다. 이미지/버전은 OCI Console의 현재 표시를 최종 기준으로 확인하세요.
+**Change image**를 눌러 Canonical Ubuntu 24.04 이미지를 선택합니다. 이미지/버전은 OCI Console의 현재 표시를 최종 기준으로 확인하세요.
 
-![OCI Canonical Ubuntu 24.04 이미지 선택](/images/oci/select-ubuntu.webp)
+![그림 18. Ubuntu 이미지 선택](/images/oci/Picture18.png)
+
+Security 설정은 별도 요구가 없다면 기본값을 사용합니다.
+
+![그림 19. Security 설정 화면 - 기본값 사용](/images/oci/Picture19.png)
 
 ### 3-3. VCN과 Public Subnet 선택
 
 Primary VNIC에서 앞에서 만든 `frp-vcn`과 `frp-public-subnet`을 각각 선택합니다.
 
-![OCI frp-vcn 및 Public Subnet 선택](/images/oci/select-vcn-subnet.webp)
+![그림 20. 기존 frp-vcn과 frp-public-subnet 선택](/images/oci/Picture20.png)
 
 ### 3-4. Public IPv4 자동할당 해제 및 SSH Key 설정
 
