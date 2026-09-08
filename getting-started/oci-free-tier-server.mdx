@@ -221,15 +221,31 @@ Under Primary VNIC, select the `frp-vcn` and `frp-public-subnet` created earlier
 
 ### 3-4. Disable automatic public IPv4 and configure the SSH key
 
-Because this guide attaches a Reserved Public IP later, turn off **Automatically assign public IPv4 address**. Then upload an existing SSH public key or let OCI generate a new key pair.
+Because this guide attaches a Reserved Public IP later, turn off **Automatically assign public IPv4 address**. Then upload an existing SSH public key or let OCI generate a new key pair, and store the private key securely.
 
-![Disable automatic public IPv4 and configure the SSH key](/images/oci/public-ip-off-ssh-key.webp)
+![Picture 21. Disable automatic public IPv4 and create/download the SSH key](/images/oci/Picture21.png)
 
-### 3-5. Review before creating the instance
+### 3-5. Review the boot volume
 
-Review the image, shape, VCN/subnet, and SSH key settings before creating the instance.
+Unless you have a separate storage requirement, keep the boot-volume settings at their defaults.
 
-![Review the OCI instance configuration](/images/oci/instance-review.webp)
+![Picture 22. Boot Volume settings - keep the defaults unless required otherwise](/images/oci/Picture22.png)
+
+### 3-6. Review before creating the instance
+
+Confirm that the image is Ubuntu 24.04 and that the shape, VCN/subnet, and SSH key match the intended configuration before creating the instance.
+
+![Picture 23. Review the Ubuntu 24.04 and VM.Standard.E2.1.Micro configuration](/images/oci/Picture23.png)
+
+### 3-7. Confirm the created instance and Free/Eligible indicator
+
+Confirm the instance state in the Compute Instances list.
+
+![Picture 24. Confirm the created instance in the instance list](/images/oci/Picture24.png)
+
+The **Always Free** indicator shown in the original screenshot reflects the OCI Console at the time of the field deployment. Current Free Tier/Eligible status can vary by region and tenancy, so use the current Console's eligibility and cost display as the final authority.
+
+![Picture 25. Confirm the Always Free indicator and select the created instance](/images/oci/Picture25.png)
 
 Important points from the original deployment:
 
@@ -247,20 +263,23 @@ Important points from the original deployment:
 
 ## 4. Attach a Reserved Public IPv4
 
-After the instance exists:
+From the instance details page, open **Networking → Primary VNIC**.
 
-```text
-Compute
-→ Instances
-→ frp-server
-→ Networking
-→ Primary / Attached VNIC
-→ IP administration
-→ Primary private IPv4
-→ Edit
-```
+![Picture 26. Open the instance Networking page and Primary VNIC](/images/oci/Picture26.png)
 
-If an ephemeral public IP is currently attached, select **No public IP** first. Then edit again and choose:
+In the VNIC, open **IP administration → Primary Private IP**.
+
+![Picture 27. Open VNIC IP administration and the Primary Private IP](/images/oci/Picture27.png)
+
+If an ephemeral public IP is currently attached, edit the private IP and select **No public IP** first.
+
+![Picture 28. Select No public IP in Edit Private IP Address](/images/oci/Picture28.png)
+
+Confirm that no public IP is currently assigned.
+
+![Picture 29. Confirm that the public IP is unassigned](/images/oci/Picture29.png)
+
+Edit the private IP again and choose:
 
 ```text
 Public IP type        Reserved public IP
@@ -268,9 +287,13 @@ Option                Create new Reserved IP Address
 Name                  frp-reserved-public-ip
 ```
 
-![Original OCI Console screenshots: VNIC IP administration and Reserved Public IP creation/assignment](/images/guides/oci-reserved-ip.webp)
+![Picture 30. Create and attach a new Reserved Public IP](/images/oci/Picture30.png)
 
 A Reserved Public IP is the address you should treat as the persistent public entry point for FRP Auto Deploy. OCI performs the public/private mapping outside the Ubuntu guest, so `ip addr` on the VM normally shows the private `10.x.x.x` address rather than the public address.
+
+<Note>
+  Picture 31 (Reserved Public IP attached) and Picture 32 (successful SSH session) from the original Word guide contain the real public IP and SSH connection details from the field deployment. They are intentionally not published unchanged in this public documentation. The procedure below uses the `<RESERVED-PUBLIC-IP>` placeholder instead.
+</Note>
 
 ## 5. Test SSH access
 
