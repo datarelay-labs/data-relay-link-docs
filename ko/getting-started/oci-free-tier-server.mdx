@@ -122,7 +122,35 @@ Subnet         frp-public-subnet
 Boot volume    기본값
 ```
 
-![기존 실구축 OCI Console 화면: Ubuntu Instance 생성, VCN/Subnet 선택, Public IPv4 자동할당 해제, SSH Key 저장](/images/guides/oci-compute.webp)
+### 3-1. Compute Instance 기본 정보
+
+먼저 **Create compute instance** 화면에서 이름과 placement를 확인합니다.
+
+![OCI Compute Instance 기본 정보](/images/oci/compute-basic.webp)
+
+### 3-2. Canonical Ubuntu 24.04 선택
+
+**Change image**를 눌러 Canonical Ubuntu를 선택하고 Ubuntu 24.04 LTS x86_64 이미지를 선택합니다. 이미지/버전은 OCI Console의 현재 표시를 최종 기준으로 확인하세요.
+
+![OCI Canonical Ubuntu 24.04 이미지 선택](/images/oci/select-ubuntu.webp)
+
+### 3-3. VCN과 Public Subnet 선택
+
+Primary VNIC에서 앞에서 만든 `frp-vcn`과 `frp-public-subnet`을 각각 선택합니다.
+
+![OCI frp-vcn 및 Public Subnet 선택](/images/oci/select-vcn-subnet.webp)
+
+### 3-4. Public IPv4 자동할당 해제 및 SSH Key 설정
+
+최종적으로 Reserved Public IP를 사용할 것이므로 **Automatically assign public IPv4 address**는 끕니다. 이어서 기존 SSH public key를 넣거나 OCI에서 새 key pair를 생성합니다.
+
+![OCI Public IPv4 자동할당 해제 및 SSH Key 설정](/images/oci/public-ip-off-ssh-key.webp)
+
+### 3-5. Instance 생성 전 최종 확인
+
+마지막으로 Image, Shape, VCN/Subnet, SSH Key 등의 값을 검토한 뒤 Instance를 생성합니다.
+
+![OCI Instance 생성 전 최종 확인](/images/oci/instance-review.webp)
 
 중요한 부분은 다음입니다.
 
