@@ -66,7 +66,9 @@ Direct mode is also fully supported. In Direct mode, TCP 6099 is a separate publ
 
 ## 1. Open Virtual Cloud Networks
 
-From the OCI Home page, enter **Networking → Virtual Cloud Networks**. The original Console screenshots below show the landmarks and the exact values used in the field deployment.
+From the OCI Home page, enter **Networking → Virtual Cloud Networks**. The image below is the **original Picture 1** from the field-deployment Word guide; it is used without conversion or downscaling.
+
+![Picture 1. OCI Home - enter Networking / Instances](/images/oci/Picture1.png)
 
 ## 2. Create the VCN, Internet Gateway, route, subnet, and ingress rules
 
@@ -82,18 +84,55 @@ Public subnet CIDR    10.0.0.0/24
 Subnet type           Regional / Public
 ```
 
-![Original OCI Console screenshots: VCN, Internet Gateway, route table, public subnet, and Security List](/images/guides/oci-networking.webp)
+### 2-1. Create the VCN
 
-The screenshots cover the same sequence as the original guide:
+Open **Virtual Cloud Networks → Create VCN**.
 
-1. **Virtual Cloud Networks → Create VCN**
-2. create `frp-vcn` with `10.0.0.0/16`
-3. **Gateways → Create Internet Gateway**
-4. **Routing → Default Route Table → Add Route Rules**
-5. route `0.0.0.0/0` to `frp-internet-gateway`
-6. **Subnets → Create Subnet**
-7. create `frp-public-subnet` with `10.0.0.0/24`, using the VCN default route table
-8. **Security → Default Security List → Add Ingress Rules**
+![Picture 2. Select Create VCN in Virtual Cloud Networks](/images/oci/Picture2.png)
+
+Set the VCN name to `frp-vcn` and the IPv4 CIDR to `10.0.0.0/16`.
+
+![Picture 3. Configure the VCN name and IPv4 CIDR](/images/oci/Picture3.png)
+
+### 2-2. Create the Internet Gateway
+
+In the new `frp-vcn`, open the **Gateways** tab and create an Internet Gateway.
+
+![Picture 4. Create an Internet Gateway from the VCN Gateways tab](/images/oci/Picture4.png)
+
+Use `frp-internet-gateway` as the example gateway name.
+
+![Picture 5. Internet Gateway name example: frp-internet-gateway](/images/oci/Picture5.png)
+
+### 2-3. Add the Internet route to the default route table
+
+Open the **Routing** tab and select `Default Route Table for frp-vcn`.
+
+![Picture 6. Select the default route table from the VCN Routing tab](/images/oci/Picture6.png)
+
+Choose **Route Rules → Add Route Rules**.
+
+![Picture 7. Add a route rule](/images/oci/Picture7.png)
+
+Add the following route:
+
+```text
+Target Type        Internet Gateway
+Destination CIDR   0.0.0.0/0
+Target             frp-internet-gateway
+```
+
+![Picture 8. Add the 0.0.0.0/0 route through the Internet Gateway](/images/oci/Picture8.png)
+
+Confirm that the route rule is present after saving.
+
+![Picture 9. Confirm the applied route rule](/images/oci/Picture9.png)
+
+### 2-4. Start creating the public subnet
+
+Open the **Subnets** tab and select **Create Subnet**.
+
+![Picture 10. Start creating the public subnet](/images/oci/Picture10.png)
 
 ### Recommended single-443 ingress
 
