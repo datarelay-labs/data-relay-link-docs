@@ -5,7 +5,7 @@ on:
     branches:
       - docs/word-original-assets-step2b
     paths:
-      - '.asset-upload/**'
+      - '.asset-upload/READY'
 
 permissions:
   contents: write
@@ -18,17 +18,32 @@ jobs:
         with:
           ref: docs/word-original-assets-step2b
 
-      - name: Rebuild original route-rule PNG
-        if: ${{ hashFiles('.asset-upload/READY') != '' }}
+      - name: Rebuild exact Word route-rule PNG
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p images/word-originals/oci
-          cat .asset-upload/route/part-* | base64 -d > images/word-originals/oci/oci-route-rule.png
+          {
+            cat .asset-upload/route8/part-000
+            cat .asset-upload/route8/part-001
+            cat .asset-upload/route8/part-002
+            cat .asset-upload/route8/part-003
+            cat .asset-upload/route8/part-004
+            cat .asset-upload/route8fix/part-005a
+            cat .asset-upload/route8fix/part-005b
+            cat .asset-upload/route8/part-006
+            cat .asset-upload/route8/part-007
+            cat .asset-upload/route8/part-008
+            cat .asset-upload/route8/part-009
+            cat .asset-upload/route8fix/part-010a
+            cat .asset-upload/route8fix/part-010b
+            cat .asset-upload/route8/part-011
+            cat .asset-upload/route8/part-012
+          } | base64 -d > images/word-originals/oci/oci-route-rule.png
+          test "$(stat -c %s images/word-originals/oci/oci-route-rule.png)" = "74799"
           echo '074b342fc455428dc0076092af4e5b304b0653f9fb249815ac18512c80513c08  images/word-originals/oci/oci-route-rule.png' | sha256sum -c -
 
       - name: Commit exact Word PNG and remove staging files
-        if: ${{ hashFiles('.asset-upload/READY') != '' }}
         shell: bash
         run: |
           set -euo pipefail
