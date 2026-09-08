@@ -14,304 +14,177 @@ keywords:
   - "FRP 서버"
 ---
 
-# OCI 무료티어 서버 준비
+# OCI 무료티어 FRP 서버 구축
 
-FRP Auto Deploy 서버에는 **인터넷에서 도달 가능한 공인 진입점**이 필요합니다. 집이나 사무실에 고정 공인 IP가 없거나 별도 VPS 비용이 부담된다면, Oracle Cloud Infrastructure(OCI)의 Always Free 대상 Linux VM을 FRP 서버로 사용할 수 있습니다.
+이 가이드는 빈 OCI 환경에서 시작해 **FRP Auto Deploy v2.2.1 서버를 만들고 첫 번째 SSH Client를 연결하는 단계까지** 한 번에 설명합니다. 화면은 기존 `frp.datarelay.run` OCI 구축 문서에서 실제로 사용했던 OCI Console 스크린샷을 재사용하고, FRP 명령과 동작 설명만 현재 stable 기준으로 업데이트했습니다.
 
-이 페이지의 목표는 **FRP Auto Deploy를 설치하기 전 단계까지** 준비하는 것입니다.
+<Note>
+  OCI Console 메뉴명, Free Tier 정책, 리전별 capacity와 가격은 바뀔 수 있습니다. 실제 생성 직전 Console의 **Always Free Eligible** 표시와 예상 비용을 최종 기준으로 확인하세요.
+</Note>
 
-```mermaid
-flowchart LR
-    U[원격 사용자 / Client]
-    IP[OCI Reserved Public IPv4\n고정 공인 주소]
-    IG[OCI Internet Gateway\n1:1 public/private NAT]
-    VM[Ubuntu 24.04 VM\nFRP Server 준비 완료]
-
-    U -->|Internet| IP
-    IP --> IG
-    IG --> VM
-```
-
-<Check>
-  이 구성을 완료하면 별도 도메인이 없어도 `고정 공인 IP + public service port`만으로 FRP Auto Deploy를 사용할 수 있습니다. DNS hostname은 나중에 선택적으로 추가하면 됩니다.
-</Check>
-
-## 이 가이드가 해결하는 문제
-
-| 걱정 | 해결 방법 |
-| --- | --- |
-| 집/회사에 고정 공인 IP가 없음 | OCI **Reserved Public IPv4** 사용 |
-| FRP 서버를 둘 Linux가 없음 | OCI **Always Free-eligible VM** 사용 |
-| 도메인이 없음 | 처음에는 IP 주소만 사용 가능 |
-| 서버 재부팅 후 IP가 바뀔까 걱정 | Reserved Public IP는 instance 수명과 분리된 persistent 객체 |
-| NAT/공유기 설정이 어려움 | OCI VM은 public subnet + Internet Gateway로 직접 public entry 제공 |
-
-## 권장 구성
-
-FRP Auto Deploy의 현재 stable 검증 범위를 기준으로 아래 구성을 권장합니다.
-
-| 항목 | 권장 값 | 이유 |
-| --- | --- | --- |
-| Region | **Tenancy Home Region** | Always Free Compute는 home region에서 생성 |
-| Shape | **VM.Standard.E2.1.Micro (AMD/x86_64)** | Always Free 대상이며 stable x86_64 Linux 경로와 가장 잘 맞음 |
-| OS Image | **Ubuntu 24.04 LTS x86_64** | FRP Auto Deploy의 real-VM 검증 baseline에 포함 |
-| Boot volume | 기본 크기 사용 | Always Free block-volume 한도 안에서 단순하게 유지 |
-| Subnet | **Public subnet** | Reserved public IPv4를 VM에 연결하려면 필요 |
-| Public IPv4 | **Reserved** | Instance lifecycle과 분리된 고정 주소 |
-| SSH | TCP/22, 관리자 IP에서만 허용 권장 | 초기 관리용 |
-| FRP Direct | TCP/443, 6099, 서비스 포트 | 기본 배포 경로 |
-
-<Warning>
-  OCI의 Free Tier 정책과 계정별 한도는 바뀔 수 있습니다. 생성 화면에서 반드시 **Always Free Eligible** 표시와 예상 비용을 확인하세요. Oracle의 현재 Always Free 문서는 E2.1.Micro AMD VM을 최대 2개까지 제공한다고 설명하지만, 실제 생성 가능 여부는 home region의 capacity와 tenancy 상태에 따라 달라질 수 있습니다.
-</Warning>
-
-## 왜 Ampere A1 대신 AMD E2.1.Micro를 권장하나요?
-
-OCI에는 Arm 기반 `VM.Standard.A1.Flex`도 Always Free 옵션이 있습니다. 하지만 FRP Auto Deploy의 stable 문서는 **native ARM64 systemd를 아직 field-validated support로 광고하지 않습니다.**
+## 최종 구성
 
 ```mermaid
 flowchart TD
-    A[무료 OCI VM 선택] --> B{Stable 지원 우선?}
-    B -->|예| X[AMD E2.1.Micro\nx86_64 권장]
-    B -->|아니오, 실험 가능| Y[Ampere A1\nARM64 별도 검증 필요]
+    U[외부 사용자] -->|SSH / HTTP / HTTPS / TCP 서비스 포트| PUB[OCI Reserved Public IPv4]
+    C[원격 FRP Client\nNAT/방화벽 뒤] -->|Outbound TCP 443 / WSS| PUB
+    PUB --> VM[Ubuntu 24.04\nFRP Auto Deploy Server]
+    VM -->|Public 443| FE[single-443 frontend]
+    FE -->|loopback 7000| FRPS[frps]
+    FE -->|loopback 6099| ENR[Enrollment / Management]
+    VM --> PORTS[Published service ports\n6000-6098]
 ```
 
-처음 설치하는 일반 사용자는 **x86_64 E2.1.Micro**를 선택하는 것이 가장 안전합니다.
+이 OCI 예제는 외부 정책을 단순하게 만들기 위해 **Enterprise single-443**를 사용합니다.
 
-## 1. OCI 계정과 Home Region 준비
+| Public ingress | 용도 |
+| --- | --- |
+| TCP 22 | OCI 서버 관리용 SSH. 가능하면 관리자 IP `/32`로 제한 |
+| TCP 443 | FRP control over WSS + Enrollment/Management HTTPS |
+| TCP 6000-6098 | Client가 게시한 서비스. 필요하면 실제 사용 포트/source만 허용 |
+| TCP 6099 | single-443에서는 **외부 공개 금지** |
+| TCP 7000 | single-443에서는 **외부 공개 금지** |
 
-OCI Free Tier 계정을 만들 때 **Home Region**을 신중하게 선택하세요. Always Free Compute는 tenancy의 home region에서 생성해야 합니다.
+Direct 모드도 stable 지원입니다. Direct를 선택하면 TCP 6099가 별도의 Public Enrollment/Management HTTPS 포트가 됩니다.
 
-지역에 따라 Always Free shape capacity가 부족할 수 있습니다. OCI에서 `Out of host capacity`가 표시되면 다른 Availability Domain을 시도하거나 시간이 지난 뒤 다시 시도해야 할 수 있습니다.
+## 10분 퀵맵
 
-<Note>
-  무료 계정 생성에는 휴대폰 번호와 카드 확인이 요구될 수 있습니다. Oracle은 사용자가 유료 계정으로 업그레이드하지 않는 한 Free Trial 이후에도 Always Free 대상 리소스를 별도로 구분합니다. 가입/과금 조건은 생성 시점의 OCI Console을 최종 기준으로 확인하세요.
-</Note>
+| 순서 | 작업 | 이 가이드의 값 |
+| --: | --- | --- |
+| 1 | VCN 생성 | `frp-vcn` / `10.0.0.0/16` |
+| 2 | Internet Gateway + Route | `0.0.0.0/0` → Internet Gateway |
+| 3 | Public Subnet | `frp-public-subnet` / `10.0.0.0/24` |
+| 4 | Security List | 관리용 SSH, `443`, `6000-6098` |
+| 5 | Compute Instance | Ubuntu 24.04 x86_64 / eligible일 때 `VM.Standard.E2.1.Micro` |
+| 6 | Public 주소 | **Reserved Public IPv4** 연결 |
+| 7 | SSH 접속 | `ubuntu@<RESERVED-IP>` |
+| 8 | FRP 설치 | immutable `v2.2.1` |
+| 9 | 검증 | `frpctl doctor` + listener 확인 |
+| 10 | 첫 Client | 현재 Zero-Touch one-line Enrollment |
 
-## 2. 인터넷 연결 가능한 VCN 만들기
+# Part I — OCI 네트워크와 VM 만들기
 
-OCI Console에서:
+## 1. Virtual Cloud Networks로 이동
+
+OCI Home에서 **Networking → Virtual Cloud Networks**로 이동합니다. 아래 화면은 기존 실구축 문서에서 사용했던 OCI Console 화면이며, 빨간 화살표와 실제 입력값을 그대로 참고할 수 있습니다.
+
+## 2. VCN, Internet Gateway, Route, Public Subnet, Ingress 구성
+
+다음 값을 사용합니다.
 
 ```text
-Networking
-→ Virtual Cloud Networks
-→ Start VCN Wizard
-→ VCN with Internet Connectivity
+VCN name             frp-vcn
+VCN IPv4 CIDR         10.0.0.0/16
+Internet Gateway      frp-internet-gateway
+Default route         0.0.0.0/0 -> Internet Gateway
+Public subnet         frp-public-subnet
+Public subnet CIDR    10.0.0.0/24
+Subnet type           Regional / Public
 ```
 
-![OCI Start VCN Wizard에서 VCN with Internet Connectivity를 선택한 화면](https://docs.oracle.com/en/applications/jd-edwards/tutorial-create-virtual-cloud-netwrok/img/wizard_selection.jpg)
+![기존 실구축 OCI Console 화면: VCN, Internet Gateway, Route Table, Public Subnet, Security List](/images/guides/oci-networking.webp)
 
-_화면 기준점: **VCN with Internet Connectivity**를 선택한 뒤 wizard를 시작합니다. OCI Console UI가 변경되면 메뉴 이름이나 위치가 조금 달라질 수 있습니다._
+화면 순서는 기존 문서와 동일합니다.
 
-간단한 예:
+1. **Virtual Cloud Networks → Create VCN**
+2. `frp-vcn`, `10.0.0.0/16` 생성
+3. **Gateways → Create Internet Gateway**
+4. **Routing → Default Route Table → Add Route Rules**
+5. `0.0.0.0/0`을 `frp-internet-gateway`로 전달
+6. **Subnets → Create Subnet**
+7. `frp-public-subnet`, `10.0.0.0/24`, VCN 기본 Route Table, Public Subnet 선택
+8. **Security → Default Security List → Add Ingress Rules**
 
-```text
-VCN CIDR          10.0.0.0/16
-Public subnet     10.0.0.0/24
-Private subnet    10.0.1.0/24
-DNS resolution    Enabled
-```
+### single-443 권장 Ingress
 
-VCN wizard는 일반적으로 다음 구성요소를 함께 만듭니다.
-
-```mermaid
-flowchart LR
-    I[Internet]
-    G[Internet Gateway]
-    P[Public Subnet\n10.0.0.0/24]
-    V[FRP Server VM]
-
-    I <--> G
-    G <--> P
-    P <--> V
-```
-
-FRP 서버 VM은 **Public Subnet**에 배치합니다.
-
-## 3. Ubuntu VM 생성
-
-OCI Console에서:
-
-```text
-Compute
-→ Instances
-→ Create instance
-```
-
-### Image
-
-권장:
-
-```text
-Ubuntu 24.04 LTS
-Architecture: x86_64 / AMD
-```
-
-### Shape
-
-```text
-VM.Standard.E2.1.Micro
-Always Free Eligible 표시 확인
-```
-
-### Networking
-
-- 방금 만든 VCN 선택
-- **Public subnet** 선택
-- Primary private IPv4는 자동 할당 가능
-- **Assign public IPv4 address는 끄는 것을 권장**
-
-![OCI 인스턴스 생성 화면의 Public IPv4 및 SSH key 설정 위치](https://docs.oracle.com/ko/learn/assign-ip-sec-vnics/images/02d971bdc56d635b10861dc2b63f52ab.png)
-
-_화면 기준점: 위 Oracle 예시는 Primary VNIC의 Public IPv4 옵션과 SSH key 영역이 어디에 있는지 보여줍니다. 이 가이드에서는 자동 Public IPv4 할당을 끄고 다음 단계에서 Reserved Public IP를 연결합니다._
-
-처음부터 ephemeral public IP를 받지 않고, 다음 단계에서 Reserved Public IP를 직접 연결하면 구성이 더 명확합니다.
-
-### SSH key
-
-기존 public key가 있으면 업로드/붙여넣기하고, 없다면 OCI에서 key pair를 생성할 수 있습니다.
+| Protocol | Destination port | Source | 용도 |
+| --- | --: | --- | --- |
+| TCP | 22 | **관리자 공인 IP/32** | SSH 관리 |
+| TCP | 443 | 필요한 Client network 또는 필요 시 `0.0.0.0/0` | WSS control + Enrollment/Management |
+| TCP | 6000-6098 | 실제 서비스가 필요한 source | Published services |
 
 <Warning>
-  OCI에서 새 key pair를 생성했다면 **private key 파일을 안전하게 보관**하세요. 나중에 다시 다운로드할 수 있다고 가정하면 안 됩니다.
+  **single-443에서는 6099와 7000을 OCI Public Ingress에 열지 않습니다.** 두 포트는 서버 내부 loopback backend입니다. 또한 다른 OCI 예제 화면의 `All Protocols` 규칙을 그대로 복사하지 말고 위 FRP용 최소 규칙을 사용하세요.
 </Warning>
 
-## 4. Reserved Public IPv4 만들기
+`6000-6098` 전체를 미리 열고 싶지 않다면 실제 배정된 서비스 포트만 열고 source CIDR도 제한할 수 있습니다.
 
-OCI Console에서:
+## 3. Ubuntu Compute Instance 생성
 
-```text
-Networking
-→ IP management
-→ Reserved public IPs
-→ Reserve public IP address
-```
-
-예:
+이 가이드의 권장값:
 
 ```text
-Name          frp-server-ip
-Compartment   <your compartment>
-IP source     Oracle pool (default)
+Name           frp-server
+Image          Canonical Ubuntu 24.04 LTS x86_64
+Shape          VM.Standard.E2.1.Micro (Console에서 Free/Eligible로 표시될 때)
+VCN            frp-vcn
+Subnet         frp-public-subnet
+Boot volume    기본값
 ```
 
-![OCI Reserve Public IP Address 설정 예시](https://cdn.hashnode.com/res/hashnode/image/upload/v1676583862771/5bf143c9-3f83-453a-bff4-63bb24df4496.png?auto=compress%2Cformat&format=webp)
+![기존 실구축 OCI Console 화면: Ubuntu Instance 생성, VCN/Subnet 선택, Public IPv4 자동할당 해제, SSH Key 저장](/images/guides/oci-compute.webp)
 
-_화면 기준점: 이름, Compartment, IP Address Source를 지정하는 화면입니다. 현재 OCI Console의 디자인은 다를 수 있으므로 실제 메뉴 위치는 Oracle의 최신 [Reserved Public IP 공식 문서](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-create.htm)를 최종 기준으로 확인하세요._
+중요한 부분은 다음입니다.
 
-Reserved Public IP는 ephemeral IP와 달리 **instance가 종료되어도 IP 객체 자체가 유지**되며, 같은 region의 다른 적절한 private IP로 재할당할 수 있습니다.
+- 기존 `frp-vcn` 선택
+- `frp-public-subnet` 선택
+- Private IPv4는 자동 할당
+- 최종 고정 IP 구성을 위해 **Automatically assign public IPv4 address를 끔**
+- 기존 SSH public key를 넣거나 OCI에서 새 key pair 생성
+- OCI가 key를 생성했다면 private key를 즉시 안전하게 보관
+- 별도 요구가 없다면 Boot Volume은 기본값 유지
 
-```mermaid
-stateDiagram-v2
-    [*] --> ReservedIP
-    ReservedIP --> VM1: assign
-    VM1 --> ReservedIP: unassign
-    ReservedIP --> VM2: reassign
-```
+<Warning>
+  `VM.Standard.E2.1.Micro`가 실제로 무료인지와 생성 가능한지는 리전/tenancy 상태에 따라 달라집니다. 생성 화면에서 Eligible/비용 표시가 다르면 이 문서만 보고 무료라고 가정하지 마세요.
+</Warning>
 
-## 5. Reserved Public IP를 VM에 연결
+## 4. Reserved Public IPv4 연결
 
-OCI 공식 Console 경로는 다음과 같습니다.
+Instance 생성 후 다음 경로로 이동합니다.
 
 ```text
 Compute
 → Instances
-→ <FRP server instance>
+→ frp-server
 → Networking
-→ Attached VNICs
-→ <Primary VNIC>
+→ Primary / Attached VNIC
 → IP administration
-→ <Primary private IP> ... → Edit
-→ Public IP type: Reserved public IP
-→ Select Existing Reserved IP Address
-→ frp-server-ip 선택
-→ Update
+→ Primary private IPv4
+→ Edit
 ```
 
-![OCI Edit Public IP 화면의 No Public IP, Ephemeral Public IP, Reserved Public IP 선택 영역](https://cdn-images-1.readmedium.com/v2/resize%3Afit%3A800/1%2Ar32ahb6-wxkD7qTEV15-GQ.png)
-
-_화면 기준점: Primary private IP를 Edit한 뒤 **Reserved Public IP**를 선택합니다. Oracle의 현재 문서 기준으로 해당 private IP에 이미 다른 public IP 객체가 붙어 있다면 먼저 해제해야 합니다._
-
-<Note>
-  VNIC의 private IP에 이미 ephemeral 또는 다른 reserved public IP가 연결되어 있으면 먼저 해제해야 합니다.
-</Note>
-
-## 6. 왜 Linux에서 공인 IP가 안 보이나요?
-
-OCI의 public IPv4는 VM NIC에 직접 설정되는 주소가 아닙니다. OCI Internet Gateway가 **public IPv4 ↔ VNIC private IPv4** 사이에 1:1 NAT를 제공합니다.
-
-```mermaid
-flowchart LR
-    PUB[Reserved Public IPv4\n203.0.113.10]
-    OCI[OCI Internet Gateway\n1:1 NAT]
-    PRI[VM private IPv4\n10.0.0.10]
-    OS[Ubuntu ip addr]
-
-    PUB <--> OCI
-    OCI <--> PRI
-    PRI --> OS
-```
-
-따라서 Ubuntu에서:
-
-```bash
-ip addr
-```
-
-를 실행했을 때 `10.x.x.x` 같은 private IP만 보이는 것이 정상입니다. 고정 공인 IP는 OCI Console의 VNIC/Public IP 정보에서 확인하세요.
-
-## 7. OCI Security List / NSG 포트 열기
-
-FRP Auto Deploy는 OCI의 Security List 또는 NSG를 자동 변경하지 않습니다.
-
-### 가장 안전한 시작 규칙
-
-| 목적 | Protocol | Port | Source 권장 |
-| --- | --- | ---: | --- |
-| SSH 관리 | TCP | 22 | **관리자 public IP/32** |
-| FRP control (Direct) | TCP | 443 | 필요한 client networks 또는 Internet |
-| Enrollment / management (Direct) | TCP | 6099 | 필요한 client networks 또는 Internet |
-| Published services | TCP | 6000-6098 | 실제 접속이 필요한 source |
-
-![OCI Security List의 Add Ingress Rules 화면](https://livelabs.oracle.com/cdn/security/oci-network-firewall/common/images/update-ingress-rules-security-list-spoke-vcn.png)
-
-_화면 기준점: Public subnet/VNIC에 연결된 Security List 또는 NSG에서 **Add Ingress Rules**를 선택한 뒤 Source CIDR, Protocol, Destination Port Range를 설정합니다. 위 화면은 Oracle LiveLabs 예시이므로 이미지의 `All Protocols` 설정을 그대로 복사하지 말고, 반드시 위 표의 FRP 전용 포트만 여세요._
-
-<Warning>
-  SSH TCP/22를 `0.0.0.0/0`에 장기간 열어두는 것보다 관리자 IP `/32`로 제한하는 것을 권장합니다.
-</Warning>
-
-서비스 포트를 자동 할당하면서 어느 포트가 사용될지 미리 모른다면 `6000-6098` 범위를 열어둘 수 있습니다. 더 엄격한 환경에서는 실제 사용 포트만 열고 서비스가 추가될 때 firewall rule을 함께 갱신하세요.
-
-### Enterprise single-443를 사용할 경우
-
-Public ingress는 보통:
+Ephemeral public IP가 이미 붙어 있다면 먼저 **No public IP**로 해제합니다. 다시 Edit에서:
 
 ```text
-TCP 443         enrollment + FRP control frontend
-TCP 6000-6098   published services
+Public IP type        Reserved public IP
+Option                Create new Reserved IP Address
+Name                  frp-reserved-public-ip
 ```
 
-이고 backend `6099` / `7000`은 loopback-only로 두며 인터넷에 노출하지 않습니다.
+를 선택합니다.
 
-## 8. Ubuntu에 SSH 접속
+![기존 실구축 OCI Console 화면: VNIC IP administration, No public IP, Reserved Public IP 생성 및 연결](/images/guides/oci-reserved-ip.webp)
 
-Ubuntu image의 기본 계정은 일반적으로 `ubuntu`입니다.
+이 Reserved Public IP가 FRP Auto Deploy의 지속적인 공인 진입점이 됩니다. OCI에서는 Public IP가 Ubuntu NIC에 직접 설정되는 것이 아니라 OCI 측에서 private VNIC 주소와 매핑되기 때문에 Ubuntu의 `ip addr`에서는 `10.x.x.x` 같은 Private IP만 보이는 것이 정상입니다.
+
+## 5. Ubuntu SSH 접속
+
+OCI Ubuntu 기본 계정은 일반적으로 `ubuntu`입니다.
 
 ```bash
-chmod 600 <your-private-key>
-ssh -i <your-private-key> ubuntu@<RESERVED_PUBLIC_IP>
+chmod 600 ~/Downloads/<private-key-file>
+ssh -i ~/Downloads/<private-key-file> ubuntu@<RESERVED-PUBLIC-IP>
 ```
 
-접속되면 다음을 확인합니다.
+접속 후:
 
 ```bash
 uname -m
 cat /etc/os-release
 systemctl --version
-openssl version
 ```
 
-권장 결과:
+를 확인합니다.
 
 ```text
 Architecture   x86_64
@@ -319,94 +192,192 @@ OS             Ubuntu 24.04 LTS
 PID 1          systemd
 ```
 
-## 9. 기본 Linux 업데이트
+# Part II — FRP Auto Deploy v2.2.1 설치
 
-FRP Auto Deploy 설치 전에 최소한 다음 정도만 준비하면 충분합니다.
+## 6. 최소 패키지와 Host Firewall 확인
 
 ```bash
 sudo apt update
-sudo apt -y upgrade
 sudo apt -y install curl ca-certificates
-```
 
-시간 동기화도 확인하세요.
-
-```bash
 timedatectl status
-```
-
-TLS/등록 문제를 피하려면 시스템 시간이 크게 틀어져 있으면 안 됩니다.
-
-Ubuntu의 local firewall 상태도 확인합니다.
-
-```bash
 sudo ufw status
+sudo iptables -S INPUT
 ```
-
-`ufw`가 active라면 OCI Security List/NSG와 **둘 다** 필요한 포트를 허용해야 합니다. `ufw`가 inactive라면 이 가이드 때문에 새로 활성화할 필요는 없습니다.
-
-## 10. 설치 전 최종 체크
-
-```mermaid
-flowchart TD
-    A[OCI VM Running] --> B{E2.1.Micro x86_64?}
-    B -->|Yes| C{Reserved Public IP assigned?}
-    C -->|Yes| D{SSH 접속 성공?}
-    D -->|Yes| E{OCI ingress rules 준비?}
-    E -->|Yes| F[FRP Auto Deploy 설치 준비 완료]
-    B -->|No| X[지원 플랫폼 문서 확인]
-    C -->|No| Y[Reserved IP 연결]
-    D -->|No| Z[VCN / route / SSH rule 확인]
-    E -->|No| W[Security List / NSG 구성]
-```
-
-체크리스트:
-
-- [ ] VM이 **Home Region**에 있음
-- [ ] Shape에 **Always Free Eligible** 표시 확인
-- [ ] Ubuntu 24.04 x86_64 사용
-- [ ] Public subnet + Internet Gateway 사용
-- [ ] Reserved Public IPv4 연결
-- [ ] SSH key 보관 완료
-- [ ] 외부에서 SSH 접속 성공
-- [ ] OCI Security List/NSG 준비
-- [ ] `curl` / CA certificates 설치
-- [ ] 시스템 시간 정상
-
-이제 [서버 설치](/ko/getting-started/server-installation)로 이동해 FRP Auto Deploy를 설치하세요.
-
-## 무료 운영 시 알아둘 점
-
-### Idle Always Free instance 회수 정책
-
-Oracle의 현재 Always Free 문서는 **idle compute instance가 회수될 수 있음**을 명시합니다. 문서에는 7일 동안 CPU/network 사용률이 매우 낮고, A1의 경우 memory 사용률도 낮은 인스턴스를 idle로 판단할 수 있다고 설명합니다.
-
-FRP 서버가 아주 가끔만 사용되는 환경이라면 이 정책을 반드시 고려하세요.
 
 <Warning>
-  Availability가 중요한 운영용 remote-access gateway라면 Free Tier가 제공하는 비용 이점과 idle/capacity 정책의 리스크를 함께 평가하세요. 인위적으로 의미 없는 부하를 만들어 회수 정책을 피하는 방식은 권장하지 않습니다.
+  예전 실환경 메모에는 해당 장비에 맞춰 `iptables INPUT`을 비우는 절차가 있었습니다. **현재 가이드에서는 `iptables -F` 또는 INPUT 기본정책 변경을 일반 설치 절차로 권장하지 않습니다.** OCI Security List/NSG와 Ubuntu Host Firewall은 서로 별도의 보안 경계이므로 필요한 포트만 환경에 맞게 명시적으로 허용하세요.
 </Warning>
 
-### Free Tier 한도는 바뀔 수 있음
+## 7. immutable stable v2.2.1 설치
 
-OCI의 Free Tier 안내 페이지와 일부 제품 가격 페이지는 시점에 따라 Ampere A1 무료 한도를 다르게 표시할 수 있습니다. 이 문서에서는 **Always Free Eligible로 표시되는 x86_64 E2.1.Micro**를 권장 경로로 삼고, 생성 직전 OCI Console의 eligibility/cost 표시를 최종 기준으로 사용합니다.
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.2.1/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+설치 질문에서 이 OCI 예제는 **Enterprise single-443**를 선택합니다. 결과 구조는 다음과 같습니다.
+
+```text
+Public host                  <RESERVED-PUBLIC-IP 또는 DNS>
+Deployment mode              Enterprise single-443
+Public control               TCP 443
+FRP backend                  127.0.0.1:7000
+Public Enrollment/Management HTTPS 443
+Allocator backend            127.0.0.1:6099
+Published service range      TCP 6000-6098
+Pinned FRP                   0.71.0
+Project                       2.2.1
+```
+
+예전 사이트의 `v2.1.0` 환경변수 설치 명령을 그대로 사용하지 마세요. 현재 field 설치 기준은 위의 immutable **v2.2.1** bootstrap과 현재 installer 질문입니다.
+
+## 8. Server 상태 확인
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+single-443 listener도 확인합니다.
+
+```bash
+sudo ss -lntp | grep -E ':(443|6099|7000)\b'
+```
+
+의도된 노출 구조:
+
+```text
+0.0.0.0:443       public frontend
+127.0.0.1:7000    frps backend
+127.0.0.1:6099    allocator backend
+```
+
+외부 Mac/Linux 등에서:
+
+```bash
+nc -vz -w 3 <RESERVED-PUBLIC-IP> 443
+```
+
+를 실행해 Public 443도 확인합니다. Client를 붙이기 전 `frpctl doctor`에 blocking failure가 없어야 합니다.
+
+## 9. 재부팅 후 영속성 확인
+
+```bash
+sudo reboot
+```
+
+다시 접속 후:
+
+```bash
+sudo frpctl show status
+sudo frpctl doctor
+sudo ss -lntp | grep -E ':(443|6099|7000)\b'
+```
+
+를 확인합니다. 정상 update/reboot는 identity나 service reservation을 새로 만들게 해서는 안 됩니다.
+
+# Part III — 첫 번째 Client 연결
+
+## 10. Zero-Touch SSH Enrollment 생성
+
+FRP Server에서:
+
+```bash
+sudo frpctl create enrollment \
+  --one-line \
+  --ssh \
+  --ssh-user <CLIENT에 실제 존재하는 계정> \
+  --label <CLIENT-LABEL>
+```
+
+서버가 출력한 **one-line 명령 전체를 그대로** Client에서 실행합니다. 직접 bootstrap payload를 다시 조립하지 마세요.
+
+<Warning>
+  생성된 Zero-Touch 명령에는 만료시간이 있는 one-time bootstrap credential이 들어 있으므로 사용/만료 전까지 secret처럼 취급합니다. 공개 채팅, 문서, 티켓에 실제 살아 있는 명령을 남기지 마세요.
+</Warning>
+
+FRP Auto Deploy는 Client의 SSH 계정, password, SSH key, `sshd`를 생성하지 않습니다. `--ssh-user`의 계정과 SSH 서비스는 Client에 이미 존재해야 합니다.
+
+## 11. Client 상태와 실제 SSH 확인
+
+Client:
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl show services
+sudo frpctl doctor
+```
+
+Server:
+
+```bash
+sudo frpctl show clients
+sudo frpctl show client <CLIENT-ID>
+sudo frpctl show client <CLIENT-ID> services
+```
+
+실제 연결:
+
+```bash
+ssh -p <할당된-PUBLIC-SERVICE-PORT> <CLIENT-USER>@<RESERVED-PUBLIC-IP>
+```
+
+**Public Service Port는 Client가 직접 고르는 값이 아닙니다.** Server가 service에 대해 할당하고 persistent reservation으로 유지합니다.
+
+# 최종 체크리스트
+
+- [ ] `frp-vcn` / `10.0.0.0/16`
+- [ ] Internet Gateway 생성
+- [ ] `0.0.0.0/0 → Internet Gateway` Route
+- [ ] `frp-public-subnet` / `10.0.0.0/24`
+- [ ] SSH 22는 관리자 source에 맞게 제한
+- [ ] TCP 443 Public reachability 확인
+- [ ] Published service port는 필요한 범위/source만 허용
+- [ ] single-443에서 6099/7000 Public 비노출
+- [ ] Ubuntu 24.04 x86_64 VM Running
+- [ ] Reserved Public IPv4 연결
+- [ ] 외부 SSH 성공
+- [ ] FRP Auto Deploy 2.2.1 / FRP 0.71.0 확인
+- [ ] `frpctl doctor` blocking failure 없음
+- [ ] 443/6099/7000 listener 노출 구조 정상
+- [ ] reboot 후 상태 유지
+- [ ] 첫 Zero-Touch Client Enrollment 성공
+- [ ] 할당된 Public SSH Port로 실제 접속 성공
+
+## 장애를 두 구간으로 나누기
+
+서비스 연결 실패 시 다음 두 테스트를 분리하면 원인을 빠르게 찾을 수 있습니다.
+
+```bash
+# 외부 workstation: Internet -> FRP Server
+nc -vz -w 3 <RESERVED-PUBLIC-IP> <PUBLIC-SERVICE-PORT>
+
+# FRP Client: Client -> Local/LAN Target
+nc -vz -w 3 <TARGET-IP> <TARGET-PORT>
+```
+
+첫 번째가 실패하면 OCI/Security List/Public endpoint를, 두 번째가 실패하면 Client와 내부 Target 사이의 routing/firewall/service를 봅니다.
 
 ## 다음 단계
 
 <CardGroup cols={2}>
-  <Card title="FRP 서버 설치" icon="server" href="/ko/getting-started/server-installation">
-    준비된 OCI Ubuntu VM에 stable FRP Auto Deploy를 설치합니다.
+  <Card title="서비스 게시" icon="network-wired" href="/ko/guides/services">
+    SSH, HTTP, HTTPS, Custom TCP 또는 내부 LAN의 다른 서버를 공개합니다.
   </Card>
+
   <Card title="방화벽 & NAT" icon="shield-halved" href="/ko/deployment/firewall-nat">
-    Public IP, NAT, 서비스 포트 동작을 더 깊게 이해합니다.
+    Direct, Public/Listen 분리 NAT, single-443 차이를 비교합니다.
   </Card>
 </CardGroup>
 
-## 공식 OCI 참고 문서
+## OCI 공식 참고 문서
 
 - [Oracle Cloud Always Free Resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
 - [Launching Your First Linux Instance](https://docs.oracle.com/en-us/iaas/Content/Compute/tutorials/first-linux-instance/overview.htm)
 - [Public IP Addresses](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingpublicIPs.htm)
 - [Creating a Reserved Public IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-create.htm)
-- [Assigning a Reserved Public IP to a Private IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-assign.htm)
-- [예약 공용 IP 작동 방식 이해](https://docs.oracle.com/ko/learn/reserved-pub-ip/index.html)
+- [Assigning a Reserved Public IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-assign.htm)
