@@ -7,6 +7,10 @@ description: "Deploy the FRP Auto Deploy server directly on the Internet or behi
 
 The remote **client** normally does not need inbound port forwarding. The **FRP server side** still needs a reachable public entry point for control, enrollment, and published service ports.
 
+![Direct, NAT, and Enterprise single-443 layouts from the original field guide](/images/guides/deployment-modes.webp)
+
+The diagram is useful for separating **where the server lives** from **which FRP Auto Deploy mode it uses**. A private server behind DNAT can still run Direct mode; Enterprise single-443 is a different transport layout for constrained client networks.
+
 ## Topology A — server has a public IP
 
 ```mermaid
@@ -43,6 +47,23 @@ Example DNAT:
 ```
 
 The client configuration must use the **public** endpoints (`203.0.113.10:8443`, `:9443` in this example), not the private server address.
+
+## Enterprise single-443 behind a firewall
+
+In single-443, the public firewall only forwards the frontend control/enrollment endpoint on TCP 443. The internal backends remain loopback-only on the FRP server:
+
+```text
+Public firewall TCP 443  -> FRP server TCP 443 frontend
+FRP server 127.0.0.1:7000 -> frps backend
+FRP server 127.0.0.1:6099 -> enrollment/management backend
+Published service ports   -> 6000-6098 (normally 1:1)
+```
+
+<Warning>
+  **Do not DNAT public TCP 7000 or 6099 to the server in Enterprise single-443.** Those are internal backend listeners in this topology. Exposing them defeats the intended single-443 boundary.
+</Warning>
+
+The distinction between a **public port** and a **local listen/backend port** matters when the server is behind NAT. Always configure the client with the public endpoint and configure the firewall to forward to the intended local listener.
 
 ## Why published service ports should stay 1:1
 

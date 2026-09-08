@@ -18,6 +18,14 @@ Before enrollment, confirm:
 
 FRP Auto Deploy does not create operating-system users, passwords, SSH keys, or application services.
 
+## Client lifecycle at a glance
+
+The original field guide used the following lifecycle diagram to show where enrollment, service configuration, normal operation, updates, and removal fit together.
+
+![FRP Auto Deploy client lifecycle](/images/guides/client-lifecycle.webp)
+
+The current v2.2.1 rule is the same at a high level: enroll once, keep the persistent CLIENT ID, change services through `frpctl`, update without re-enrollment, and use the explicit lifecycle operations when retiring a client or releasing ports.
+
 ## Choose enrollment method
 
 | Method | Best when | Who chooses initial services? |
