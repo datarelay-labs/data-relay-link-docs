@@ -122,7 +122,35 @@ Subnet         frp-public-subnet
 Boot volume    default
 ```
 
-![Original OCI Console screenshots: create Ubuntu instance, choose VCN/subnet, disable automatic public IPv4, and save the SSH key](/images/guides/oci-compute.webp)
+### 3-1. Enter the basic Compute Instance settings
+
+Start on **Create compute instance** and confirm the instance name and placement.
+
+![OCI Compute Instance basic settings](/images/oci/compute-basic.webp)
+
+### 3-2. Select Canonical Ubuntu 24.04
+
+Choose **Change image**, select Canonical Ubuntu, and use the Ubuntu 24.04 LTS x86_64 image. Treat the image/version currently shown in OCI Console as authoritative.
+
+![Select Canonical Ubuntu 24.04 in OCI](/images/oci/select-ubuntu.webp)
+
+### 3-3. Select the VCN and public subnet
+
+Under Primary VNIC, select the `frp-vcn` and `frp-public-subnet` created earlier.
+
+![Select frp-vcn and the public subnet in OCI](/images/oci/select-vcn-subnet.webp)
+
+### 3-4. Disable automatic public IPv4 and configure the SSH key
+
+Because this guide attaches a Reserved Public IP later, turn off **Automatically assign public IPv4 address**. Then upload an existing SSH public key or let OCI generate a new key pair.
+
+![Disable automatic public IPv4 and configure the SSH key](/images/oci/public-ip-off-ssh-key.webp)
+
+### 3-5. Review before creating the instance
+
+Review the image, shape, VCN/subnet, and SSH key settings before creating the instance.
+
+![Review the OCI instance configuration](/images/oci/instance-review.webp)
 
 Important points from the original deployment:
 
