@@ -5,29 +5,34 @@ description: "Understand the stable release, development tree, and pinned FRP ve
 
 # Release Status
 
-FRP Auto Deploy separates the immutable stable release from the mutable development branch.
+FRP Auto Deploy separates the immutable stable release from the mutable `main` branch.
 
 ## Current state
 
 | Item | Current |
 | --- | --- |
-| Published stable release | **v2.1.2** |
-| Project version on `main` | **2.1.3** |
-| Pinned / tested FRP | **v0.70.1** |
-| Stable install source | immutable `v2.1.2` tag |
-| `main` | development channel |
+| Published stable release | **v2.2.1** |
+| Project version | **2.2.1** |
+| Pinned / tested FRP | **v0.71.0** |
+| Stable install source | immutable `v2.2.1` tag |
+| Release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
+| Qualified candidate | `2140be5b6342c3651c16a458f8ea1bc9b577d992` |
+| Full Real E2E | **PASS / PASS on the same exact candidate HEAD** |
+| `main` | may advance with post-release development or docs-only commits |
+
+The qualified candidate and the v2.2.1 release tree were identical. Published v2.2.0 remains an immutable historical release and was not retagged.
 
 ## Use stable for field installs
 
-For a normal installation, use the immutable release tag:
+For a normal installation, use the immutable v2.2.1 release tag:
 
 ```bash
 curl -fsSL \
-  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.2.1/dist/bootstrap-server.sh \
   | sudo bash
 ```
 
-Do not copy an unreleased `main` command into field documentation unless you intentionally want the development channel.
+Do not replace the immutable tag with mutable `main` unless you intentionally want development-channel behavior.
 
 ## FRP version policy
 
@@ -36,9 +41,11 @@ The project does not automatically install the newest upstream FRP. The upstream
 Current pinned FRP:
 
 ```text
-0.70.1
+0.71.0
 ```
 
-## Platform status
+## Stable platform status
 
-The stable product scope is Linux/systemd. Windows and macOS automation remain non-stable development targets and should not be presented as stable-supported in user documentation until the repository's release state says otherwise.
+v2.2.1 includes Real E2E validation for **Ubuntu 24 physical, Rocky Linux 8.10, Rocky Linux 9.4, Amazon Linux 2023, macOS Apple Silicon, and Windows 10 / PowerShell 5.1**.
+
+Amazon Linux 2 remains **container/CI portability only**, and PowerShell 7 is **CI validated** unless a real test host actually has `pwsh` installed. See [Supported Platforms](/reference/platforms) for the exact validation matrix.

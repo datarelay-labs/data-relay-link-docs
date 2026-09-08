@@ -89,14 +89,26 @@ sequenceDiagram
 
 | 항목 | 현재 |
 | --- | --- |
-| Stable release | **v2.1.2** |
-| `main` 프로젝트 버전 | **2.1.3 development** |
-| Pinned / tested FRP | **v0.70.1** |
-| Stable client 범위 | **Linux/systemd** |
-| 가장 명확한 real-VM baseline | **Ubuntu 22.04 / 24.04** |
+| Stable release | **v2.2.1** |
+| Project version | **2.2.1** |
+| Pinned / tested FRP | **v0.71.0** |
+| Release qualification | **Double Full Real E2E PASS / PASS** |
 | 기본 배포 | **Direct** |
 
-Windows와 macOS 자동화는 개발 대상이며 **v2.1.2 stable 지원 범위가 아닙니다.**
+### 검증된 Client 플랫폼
+
+| 플랫폼 | v2.2.1 검증 수준 |
+| --- | --- |
+| Ubuntu 24 physical | **Real E2E 검증 완료** |
+| Rocky Linux 8.10 | **Real E2E 검증 완료** |
+| Rocky Linux 9.4 | **Real E2E 검증 완료** |
+| Amazon Linux 2023 | **Real E2E 검증 완료** |
+| macOS Apple Silicon | **Real E2E 검증 완료** |
+| Windows 10 / PowerShell 5.1 | **Real E2E 검증 완료** |
+| Amazon Linux 2 | Container / CI portability만 검증 |
+| PowerShell 7 | CI 검증 완료; 실제 host에 `pwsh`가 있을 때만 same-host Real E2E claim |
+
+FRP Auto Deploy **Server는 Linux 기반**을 유지합니다. Client의 Real E2E와 container portability는 서로 다른 검증 수준이므로 구분해서 표시합니다.
 
 ## 가장 많이 헷갈리는 네 가지
 

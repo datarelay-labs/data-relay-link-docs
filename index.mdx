@@ -103,14 +103,26 @@ One client can publish several services, and a client can also publish services 
 
 | Item | Current |
 | --- | --- |
-| Stable project release | **v2.1.2** |
-| Project version on `main` | **2.1.3** development |
-| Pinned / tested FRP | **v0.70.1** |
-| Stable client scope | **Linux/systemd** |
-| Best-documented real-VM baseline | **Ubuntu 22.04 / 24.04** |
+| Stable project release | **v2.2.1** |
+| Project version | **2.2.1** |
+| Pinned / tested FRP | **v0.71.0** |
+| Release qualification | **Double Full Real E2E PASS / PASS** |
 | Default deployment | **Direct** |
 
-Windows and macOS automation are development targets and are **not stable-supported in v2.1.2**.
+### Validated client platforms
+
+| Platform | v2.2.1 validation |
+| --- | --- |
+| Ubuntu 24 physical | **Real E2E validated** |
+| Rocky Linux 8.10 | **Real E2E validated** |
+| Rocky Linux 9.4 | **Real E2E validated** |
+| Amazon Linux 2023 | **Real E2E validated** |
+| macOS Apple Silicon | **Real E2E validated** |
+| Windows 10 / PowerShell 5.1 | **Real E2E validated** |
+| Amazon Linux 2 | Container / CI portability only |
+| PowerShell 7 | CI validated; same-host Real E2E only when `pwsh` is installed |
+
+The FRP Auto Deploy **server remains Linux-based**. Client validation and container portability are intentionally reported separately so a lower-level test is never presented as a stronger field claim.
 
 ## Four rules that prevent most mistakes
 

@@ -10,8 +10,9 @@ FRP Auto Deploy is intentionally focused on lightweight remote-access management
 ## Current boundaries
 
 - TCP services only
-- Stable client scope is Linux/systemd
-- Windows and macOS client automation are not stable-supported in the current release line
+- The FRP Auto Deploy server remains Linux-based
+- v2.2.1 stable client validation includes Linux real hosts, macOS Apple Silicon, and Windows 10 / PowerShell 5.1
+- Amazon Linux 2 is portability/CI-only in the current release qualification; PowerShell 7 is CI-validated unless a real host actually has `pwsh` installed
 - Published-service NAT is designed around keeping the same FRP service port on the public and internal sides
 - External cloud firewalls, security groups, host firewalls, and NAT rules are not configured automatically
 - SSH accounts, passwords, SSH keys, and `sshd` configuration are not managed automatically
