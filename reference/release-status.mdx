@@ -22,6 +22,38 @@ FRP Auto Deploy separates the immutable stable release from the mutable `main` b
 
 The qualified candidate and the v2.2.1 release tree were identical. Published v2.2.0 remains an immutable historical release and was not retagged.
 
+## Canonical documentation closure
+
+The post-release documentation restoration phase **`CANONICAL_PRODUCT_MASTER_RESTORE_V2_2_1_DOCS_CLOSURE`** finished with **PASS**.
+
+| Item | Result |
+| --- | --- |
+| Final repository `main` HEAD after docs closure | `343f292d91d01c3f263ff5c443f101d185b5527f` |
+| v2.2.1 release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
+| v2.2.1 tag target changed | **NO** |
+| v2.2.0 tag changed | **NO** |
+| New release created | **NO** |
+| Product runtime files changed | **NO** |
+| Real E2E rerun required | **NO** |
+| Canonical Product Master restore | **PASS** |
+| Product Master structural check | **PASS** |
+| Current release/platform matrix updated | **YES** |
+| Release history preserved | **YES** |
+| Provenance added | **YES** |
+| Known corruption removed | **YES** |
+| Public metadata scan | **PASS** |
+| Secret scan | **PASS** |
+| `SHA256SUMS` updated | **YES** |
+| Final documentation state | **CANONICAL** |
+
+The damaged/truncated 2,173-line derivative was replaced by the Owner-reconstructed full integrated Product Master (approximately 3,625 lines) through **PR #12**. The restored authoritative document is `docs/PRODUCT_MASTER.md`. The incomplete surgical PR #13 was superseded and closed.
+
+The documentation-only merge advanced `main` from the v2.2.1 release commit to `343f292…` without changing the immutable v2.2.1 tag or the release payload. This is why the **stable install identity remains v2.2.1 / `19d4b6f…`**, while the repository `main` HEAD is newer.
+
+<Note>
+  `docs/GITHUB_SETUP.md` stale-state cleanup was not completed in this closure (`GITHUB_SETUP_STALE_STATE_FIXED=NO`). It is a documentation follow-up and does not change the v2.2.1 runtime, release tag, or validated platform claims.
+</Note>
+
 ## Use stable for field installs
 
 For a normal installation, use the immutable v2.2.1 release tag:
