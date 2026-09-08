@@ -66,7 +66,9 @@ Direct mode is also fully supported. In Direct mode, TCP 6099 is a separate publ
 
 ## 1. Open Virtual Cloud Networks
 
-From the OCI Home page, enter **Networking → Virtual Cloud Networks**. The original Console screenshots below show the landmarks and the exact values used in the field deployment.
+From the OCI Home page, enter **Networking → Virtual Cloud Networks**. The image below is the **original Picture 1** from the field-deployment Word guide; it is used without conversion or downscaling.
+
+![Picture 1. OCI Home - enter Networking / Instances](/images/oci/Picture1.png)
 
 ## 2. Create the VCN, Internet Gateway, route, subnet, and ingress rules
 
@@ -82,18 +84,87 @@ Public subnet CIDR    10.0.0.0/24
 Subnet type           Regional / Public
 ```
 
-![Original OCI Console screenshots: VCN, Internet Gateway, route table, public subnet, and Security List](/images/guides/oci-networking.webp)
+### 2-1. Create the VCN
 
-The screenshots cover the same sequence as the original guide:
+Open **Virtual Cloud Networks → Create VCN**.
 
-1. **Virtual Cloud Networks → Create VCN**
-2. create `frp-vcn` with `10.0.0.0/16`
-3. **Gateways → Create Internet Gateway**
-4. **Routing → Default Route Table → Add Route Rules**
-5. route `0.0.0.0/0` to `frp-internet-gateway`
-6. **Subnets → Create Subnet**
-7. create `frp-public-subnet` with `10.0.0.0/24`, using the VCN default route table
-8. **Security → Default Security List → Add Ingress Rules**
+![Picture 2. Select Create VCN in Virtual Cloud Networks](/images/oci/Picture2.png)
+
+Set the VCN name to `frp-vcn` and the IPv4 CIDR to `10.0.0.0/16`.
+
+![Picture 3. Configure the VCN name and IPv4 CIDR](/images/oci/Picture3.png)
+
+### 2-2. Create the Internet Gateway
+
+In the new `frp-vcn`, open the **Gateways** tab and create an Internet Gateway.
+
+![Picture 4. Create an Internet Gateway from the VCN Gateways tab](/images/oci/Picture4.png)
+
+Use `frp-internet-gateway` as the example gateway name.
+
+![Picture 5. Internet Gateway name example: frp-internet-gateway](/images/oci/Picture5.png)
+
+### 2-3. Add the Internet route to the default route table
+
+Open the **Routing** tab and select `Default Route Table for frp-vcn`.
+
+![Picture 6. Select the default route table from the VCN Routing tab](/images/oci/Picture6.png)
+
+Choose **Route Rules → Add Route Rules**.
+
+![Picture 7. Add a route rule](/images/oci/Picture7.png)
+
+Add the following route:
+
+```text
+Target Type        Internet Gateway
+Destination CIDR   0.0.0.0/0
+Target             frp-internet-gateway
+```
+
+![Picture 8. Add the 0.0.0.0/0 route through the Internet Gateway](/images/oci/Picture8.png)
+
+Confirm that the route rule is present after saving.
+
+![Picture 9. Confirm the applied route rule](/images/oci/Picture9.png)
+
+### 2-4. Start creating the public subnet
+
+Open the **Subnets** tab and select **Create Subnet**.
+
+![Picture 10. Start creating the public subnet](/images/oci/Picture10.png)
+
+### 2-5. Configure the public subnet
+
+Create the public subnet with the following values:
+
+```text
+Name           frp-public-subnet
+Subnet Type    Regional
+IPv4 CIDR      10.0.0.0/24
+Route Table    Default Route Table for frp-vcn
+Subnet Access  Public Subnet
+```
+
+![Picture 11. Configure the public subnet](/images/oci/Picture11.png)
+
+### 2-6. Configure the Security List
+
+Open the VCN's **Security Lists** page.
+
+![Picture 12. Open the VCN Security Lists page](/images/oci/Picture12.png)
+
+Review the ingress rules on the **Default Security List**.
+
+![Picture 13. Review the Default Security List ingress rules](/images/oci/Picture13.png)
+
+For FRP Auto Deploy in single-443 mode, add TCP 443 and the published-service range TCP 6000-6098. Keep SSH 22 for administration, preferably restricted to your administrator public IP `/32`.
+
+![Picture 14. Add ingress rules for TCP 443 and TCP 6000-6098](/images/oci/Picture14.png)
+
+Confirm that the ingress rules were applied.
+
+![Picture 15. Confirm the applied ingress rules](/images/oci/Picture15.png)
 
 ### Recommended single-443 ingress
 
@@ -122,35 +193,59 @@ Subnet         frp-public-subnet
 Boot volume    default
 ```
 
+Before creating the Compute Instance, confirm that the VCN, Internet Gateway, route, public subnet, and Security List created above are ready, then open **Compute → Instances**.
+
+![Picture 16. Confirm the network resources and open Compute](/images/oci/Picture16.png)
+
 ### 3-1. Enter the basic Compute Instance settings
 
 Start on **Create compute instance** and confirm the instance name and placement.
 
-![OCI Compute Instance basic settings](/images/oci/compute-basic.webp)
+![Picture 17. Compute Instance basic settings](/images/oci/Picture17.png)
 
 ### 3-2. Select Canonical Ubuntu 24.04
 
-Choose **Change image**, select Canonical Ubuntu, and use the Ubuntu 24.04 LTS x86_64 image. Treat the image/version currently shown in OCI Console as authoritative.
+Choose **Change image** and select Canonical Ubuntu 24.04. Treat the image/version currently shown in OCI Console as authoritative.
 
-![Select Canonical Ubuntu 24.04 in OCI](/images/oci/select-ubuntu.webp)
+![Picture 18. Select the Ubuntu image](/images/oci/Picture18.png)
+
+Unless your environment requires something different, keep the Security settings at their defaults.
+
+![Picture 19. Security settings - use the defaults unless required otherwise](/images/oci/Picture19.png)
 
 ### 3-3. Select the VCN and public subnet
 
 Under Primary VNIC, select the `frp-vcn` and `frp-public-subnet` created earlier.
 
-![Select frp-vcn and the public subnet in OCI](/images/oci/select-vcn-subnet.webp)
+![Picture 20. Select the existing frp-vcn and frp-public-subnet](/images/oci/Picture20.png)
 
 ### 3-4. Disable automatic public IPv4 and configure the SSH key
 
-Because this guide attaches a Reserved Public IP later, turn off **Automatically assign public IPv4 address**. Then upload an existing SSH public key or let OCI generate a new key pair.
+Because this guide attaches a Reserved Public IP later, turn off **Automatically assign public IPv4 address**. Then upload an existing SSH public key or let OCI generate a new key pair, and store the private key securely.
 
-![Disable automatic public IPv4 and configure the SSH key](/images/oci/public-ip-off-ssh-key.webp)
+![Picture 21. Disable automatic public IPv4 and create/download the SSH key](/images/oci/Picture21.png)
 
-### 3-5. Review before creating the instance
+### 3-5. Review the boot volume
 
-Review the image, shape, VCN/subnet, and SSH key settings before creating the instance.
+Unless you have a separate storage requirement, keep the boot-volume settings at their defaults.
 
-![Review the OCI instance configuration](/images/oci/instance-review.webp)
+![Picture 22. Boot Volume settings - keep the defaults unless required otherwise](/images/oci/Picture22.png)
+
+### 3-6. Review before creating the instance
+
+Confirm that the image is Ubuntu 24.04 and that the shape, VCN/subnet, and SSH key match the intended configuration before creating the instance.
+
+![Picture 23. Review the Ubuntu 24.04 and VM.Standard.E2.1.Micro configuration](/images/oci/Picture23.png)
+
+### 3-7. Confirm the created instance and Free/Eligible indicator
+
+Confirm the instance state in the Compute Instances list.
+
+![Picture 24. Confirm the created instance in the instance list](/images/oci/Picture24.png)
+
+The **Always Free** indicator shown in the original screenshot reflects the OCI Console at the time of the field deployment. Current Free Tier/Eligible status can vary by region and tenancy, so use the current Console's eligibility and cost display as the final authority.
+
+![Picture 25. Confirm the Always Free indicator and select the created instance](/images/oci/Picture25.png)
 
 Important points from the original deployment:
 
@@ -168,20 +263,23 @@ Important points from the original deployment:
 
 ## 4. Attach a Reserved Public IPv4
 
-After the instance exists:
+From the instance details page, open **Networking → Primary VNIC**.
 
-```text
-Compute
-→ Instances
-→ frp-server
-→ Networking
-→ Primary / Attached VNIC
-→ IP administration
-→ Primary private IPv4
-→ Edit
-```
+![Picture 26. Open the instance Networking page and Primary VNIC](/images/oci/Picture26.png)
 
-If an ephemeral public IP is currently attached, select **No public IP** first. Then edit again and choose:
+In the VNIC, open **IP administration → Primary Private IP**.
+
+![Picture 27. Open VNIC IP administration and the Primary Private IP](/images/oci/Picture27.png)
+
+If an ephemeral public IP is currently attached, edit the private IP and select **No public IP** first.
+
+![Picture 28. Select No public IP in Edit Private IP Address](/images/oci/Picture28.png)
+
+Confirm that no public IP is currently assigned.
+
+![Picture 29. Confirm that the public IP is unassigned](/images/oci/Picture29.png)
+
+Edit the private IP again and choose:
 
 ```text
 Public IP type        Reserved public IP
@@ -189,9 +287,13 @@ Option                Create new Reserved IP Address
 Name                  frp-reserved-public-ip
 ```
 
-![Original OCI Console screenshots: VNIC IP administration and Reserved Public IP creation/assignment](/images/guides/oci-reserved-ip.webp)
+![Picture 30. Create and attach a new Reserved Public IP](/images/oci/Picture30.png)
 
 A Reserved Public IP is the address you should treat as the persistent public entry point for FRP Auto Deploy. OCI performs the public/private mapping outside the Ubuntu guest, so `ip addr` on the VM normally shows the private `10.x.x.x` address rather than the public address.
+
+<Note>
+  Picture 31 (Reserved Public IP attached) and Picture 32 (successful SSH session) from the original Word guide contain the real public IP and SSH connection details from the field deployment. They are intentionally not published unchanged in this public documentation. The procedure below uses the `<RESERVED-PUBLIC-IP>` placeholder instead.
+</Note>
 
 ## 5. Test SSH access
 
