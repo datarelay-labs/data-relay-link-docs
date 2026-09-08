@@ -50,7 +50,7 @@ flowchart LR
 
 There is intentionally no ambiguous `delete client` command.
 
-## Enrollment credential lifecycle — stable v2.1.2
+## Enrollment credential lifecycle — stable v2.2.1
 
 ```mermaid
 stateDiagram-v2
@@ -65,14 +65,14 @@ stateDiagram-v2
     Expired --> [*]
 ```
 
-`show enrollments` does not expose the secret itself. Stable v2.1.2 supports revoking active enrollment credentials with:
+`show enrollments` does not expose the secret itself. Stable v2.2.1 supports revoking active enrollment credentials with:
 
 ```bash
 sudo frpctl revoke enrollment <ID>
 ```
 
 <Note>
-  The 2.1.3 development tree adds explicit terminal enrollment purge/retention controls. Those should not be assumed on stable v2.1.2.
+  The stable v2.2.1 CLI includes the qualified enrollment lifecycle/retention controls. Mutable `main` may contain later changes, so field procedures should follow the immutable v2.2.1 contract.
 </Note>
 
 ## Which command do I actually want?

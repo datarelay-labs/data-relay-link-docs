@@ -1,28 +1,33 @@
 ---
 title: "릴리스 상태"
 sidebarTitle: "릴리스 상태"
-description: "Stable v2.1.2, development main 2.1.3, pinned FRP v0.70.1의 관계를 명확히 구분합니다."
+description: "Stable v2.2.1, pinned FRP v0.71.0, Double Full Real E2E 결과와 immutable release 기준을 설명합니다."
 icon: "tag"
 ---
 
 # 릴리스 상태
 
-FRP Auto Deploy는 **immutable stable release**와 **mutable development branch**를 구분합니다.
+FRP Auto Deploy는 **immutable stable release**와 mutable `main` branch를 구분합니다.
 
 ## 현재 기준
 
 | 항목 | 현재 |
 | --- | --- |
-| Published stable release | **v2.1.2** |
-| `main` project version | **2.1.3** |
-| Pinned/tested FRP | **v0.70.1** |
-| Field install 기준 | immutable `v2.1.2` tag |
+| Published stable release | **v2.2.1** |
+| Project version | **2.2.1** |
+| Pinned/tested FRP | **v0.71.0** |
+| Field install 기준 | immutable `v2.2.1` tag |
+| Release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
+| Qualified candidate | `2140be5b6342c3651c16a458f8ea1bc9b577d992` |
+| Full Real E2E | **동일 exact candidate HEAD에서 PASS / PASS** |
+
+Qualified candidate와 v2.2.1 release tree는 동일했습니다. 이미 공개된 v2.2.0은 historical release로 그대로 유지되며 retag하지 않았습니다.
 
 ```mermaid
 flowchart LR
-    M[main / 2.1.3 development] -->|검증 + release| T[immutable release tag]
+    M[main] -->|qualification + release| T[immutable v2.2.1 tag]
     T --> F[Field installation]
-    U[Upstream FRP] -->|별도 검증 후 채택| P[Pinned FRP version]
+    U[Upstream FRP] -->|별도 검증 후 채택| P[Pinned FRP 0.71.0]
     P --> T
 ```
 
@@ -30,11 +35,11 @@ flowchart LR
 
 ```bash
 curl -fsSL \
-  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.1.2/dist/bootstrap-server.sh \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.2.1/dist/bootstrap-server.sh \
   | sudo bash
 ```
 
-`main`은 다음 release를 위한 development channel이므로 일반 field 설치 문서에서 stable과 섞지 않습니다.
+일반 field 설치에서는 mutable `main` 대신 immutable stable tag를 사용합니다.
 
 ## FRP version 정책
 
@@ -43,15 +48,13 @@ FRP Auto Deploy는 upstream 최신 버전을 자동으로 따라가지 않습니
 현재 pinned FRP:
 
 ```text
-0.70.1
+0.71.0
 ```
 
 `show upstream`은 정보용이며 newest upstream binary를 자동 채택하는 의미가 아닙니다.
 
-## 지원 표현도 release 기준
+## 현재 Stable 플랫폼
 
-Stable product scope와 lab/E2E/development 결과를 구분합니다. Windows/macOS automation이나 특정 Linux 환경이 실험에서 성공했다고 해서 stable field support로 자동 승격되는 것은 아닙니다.
+v2.2.1에서는 **Ubuntu 24 physical, Rocky Linux 8.10, Rocky Linux 9.4, Amazon Linux 2023, macOS Apple Silicon, Windows 10 / PowerShell 5.1**이 Real E2E 검증됐습니다.
 
-<Tip>
-  현재 환경의 support 수준은 [지원 플랫폼 & 제한](/ko/reference/platforms)에서 확인하세요.
-</Tip>
+Amazon Linux 2는 **Container/CI portability만**, PowerShell 7은 **CI 검증**으로 구분합니다. 정확한 matrix는 [지원 플랫폼 & 제한](/ko/reference/platforms)을 확인하세요.

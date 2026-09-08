@@ -57,8 +57,8 @@ A normal update is **not** a re-enrollment operation.
 
 | Channel | Meaning | Recommended use |
 | --- | --- | --- |
-| **v2.1.2 immutable tag** | current published stable | field/normal installation |
-| **main = 2.1.3** | mutable development channel | intentional development/testing only |
+| **v2.2.1 immutable tag** | current published stable | field/normal installation |
+| **main** | mutable development/docs channel | intentional development/testing only |
 
 Do not copy a development-only command into stable field documentation unless the operator explicitly opted into development behavior.
 
@@ -69,12 +69,12 @@ sudo frpctl show upstream
 sudo frpctl update frp --check
 ```
 
-`show upstream` is informational. FRP Auto Deploy does **not** automatically install the newest upstream FRP release. The project remains pinned to the version it has tested, currently **v0.70.1**.
+`show upstream` is informational. FRP Auto Deploy does **not** automatically install the newest upstream FRP release. The current stable release remains pinned to the qualified version, **v0.71.0**.
 
 ```mermaid
 flowchart LR
     U[Newest upstream FRP] -. informational .-> C[show upstream]
-    P[Pinned/tested FRP 0.70.1] --> A[Allowed normal update path]
+    P[Pinned/tested FRP 0.71.0] --> A[Allowed normal update path]
 ```
 
 ## Same-version refreshes

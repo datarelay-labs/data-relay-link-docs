@@ -110,7 +110,7 @@ sudo frpctl show services
 sudo frpctl doctor
 ```
 
-## Stable v2.1.2 enrollment lifecycle
+## Stable v2.2.1 enrollment lifecycle
 
 Use the non-secret enrollment ID to revoke an active credential:
 
@@ -118,11 +118,7 @@ Use the non-secret enrollment ID to revoke an active credential:
 sudo frpctl revoke enrollment <ID>
 ```
 
-`show enrollments` never prints the secret itself.
-
-<Note>
-  The **2.1.3 development tree** adds more explicit terminal enrollment-retention/purge operations. Those are development-channel behavior and are not documented here as stable v2.1.2 commands.
-</Note>
+`show enrollments` never prints the secret itself. Enrollment retention/purge and lifecycle behavior documented by the v2.2.1 CLI are part of the stable release contract; mutable `main` may contain later changes.
 
 ## Persistent identity
 
