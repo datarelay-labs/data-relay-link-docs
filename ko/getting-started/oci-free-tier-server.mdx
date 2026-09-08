@@ -99,6 +99,10 @@ Networking
 → VCN with Internet Connectivity
 ```
 
+![OCI Start VCN Wizard에서 VCN with Internet Connectivity를 선택한 화면](https://docs.oracle.com/en/applications/jd-edwards/tutorial-create-virtual-cloud-netwrok/img/wizard_selection.jpg)
+
+_화면 기준점: **VCN with Internet Connectivity**를 선택한 뒤 wizard를 시작합니다. OCI Console UI가 변경되면 메뉴 이름이나 위치가 조금 달라질 수 있습니다._
+
 간단한 예:
 
 ```text
@@ -157,6 +161,10 @@ Always Free Eligible 표시 확인
 - Primary private IPv4는 자동 할당 가능
 - **Assign public IPv4 address는 끄는 것을 권장**
 
+![OCI 인스턴스 생성 화면의 Public IPv4 및 SSH key 설정 위치](https://docs.oracle.com/ko/learn/assign-ip-sec-vnics/images/02d971bdc56d635b10861dc2b63f52ab.png)
+
+_화면 기준점: 위 Oracle 예시는 Primary VNIC의 Public IPv4 옵션과 SSH key 영역이 어디에 있는지 보여줍니다. 이 가이드에서는 자동 Public IPv4 할당을 끄고 다음 단계에서 Reserved Public IP를 연결합니다._
+
 처음부터 ephemeral public IP를 받지 않고, 다음 단계에서 Reserved Public IP를 직접 연결하면 구성이 더 명확합니다.
 
 ### SSH key
@@ -186,6 +194,10 @@ Compartment   <your compartment>
 IP source     Oracle pool (default)
 ```
 
+![OCI Reserve Public IP Address 설정 예시](https://cdn.hashnode.com/res/hashnode/image/upload/v1676583862771/5bf143c9-3f83-453a-bff4-63bb24df4496.png?auto=compress%2Cformat&format=webp)
+
+_화면 기준점: 이름, Compartment, IP Address Source를 지정하는 화면입니다. 현재 OCI Console의 디자인은 다를 수 있으므로 실제 메뉴 위치는 Oracle의 최신 [Reserved Public IP 공식 문서](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-create.htm)를 최종 기준으로 확인하세요._
+
 Reserved Public IP는 ephemeral IP와 달리 **instance가 종료되어도 IP 객체 자체가 유지**되며, 같은 region의 다른 적절한 private IP로 재할당할 수 있습니다.
 
 ```mermaid
@@ -214,6 +226,10 @@ Compute
 → frp-server-ip 선택
 → Update
 ```
+
+![OCI Edit Public IP 화면의 No Public IP, Ephemeral Public IP, Reserved Public IP 선택 영역](https://cdn-images-1.readmedium.com/v2/resize%3Afit%3A800/1%2Ar32ahb6-wxkD7qTEV15-GQ.png)
+
+_화면 기준점: Primary private IP를 Edit한 뒤 **Reserved Public IP**를 선택합니다. Oracle의 현재 문서 기준으로 해당 private IP에 이미 다른 public IP 객체가 붙어 있다면 먼저 해제해야 합니다._
 
 <Note>
   VNIC의 private IP에 이미 ephemeral 또는 다른 reserved public IP가 연결되어 있으면 먼저 해제해야 합니다.
@@ -255,6 +271,10 @@ FRP Auto Deploy는 OCI의 Security List 또는 NSG를 자동 변경하지 않습
 | FRP control (Direct) | TCP | 443 | 필요한 client networks 또는 Internet |
 | Enrollment / management (Direct) | TCP | 6099 | 필요한 client networks 또는 Internet |
 | Published services | TCP | 6000-6098 | 실제 접속이 필요한 source |
+
+![OCI Security List의 Add Ingress Rules 화면](https://livelabs.oracle.com/cdn/security/oci-network-firewall/common/images/update-ingress-rules-security-list-spoke-vcn.png)
+
+_화면 기준점: Public subnet/VNIC에 연결된 Security List 또는 NSG에서 **Add Ingress Rules**를 선택한 뒤 Source CIDR, Protocol, Destination Port Range를 설정합니다. 위 화면은 Oracle LiveLabs 예시이므로 이미지의 `All Protocols` 설정을 그대로 복사하지 말고, 반드시 위 표의 FRP 전용 포트만 여세요._
 
 <Warning>
   SSH TCP/22를 `0.0.0.0/0`에 장기간 열어두는 것보다 관리자 IP `/32`로 제한하는 것을 권장합니다.
