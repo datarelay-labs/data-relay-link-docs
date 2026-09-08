@@ -7,6 +7,10 @@ description: "공인 IP 직접 구성과 방화벽/NAT 뒤 배포의 차이"
 
 원격 **Client**에는 일반적으로 inbound port forwarding이 필요하지 않습니다. 반대로 **FRP Server 측 public entry point**는 control, enrollment, published service를 받을 수 있어야 합니다.
 
+![기존 실사용 가이드의 Direct, NAT, Enterprise single-443 배포 방식](/images/guides/deployment-modes.webp)
+
+이 그림을 보면 **Server가 어디에 있는가**와 **어떤 제품 모드를 쓰는가**를 분리해서 이해하기 쉽습니다. Private IP Server를 DNAT 뒤에 두어도 Direct 모드를 사용할 수 있고, Enterprise single-443은 제약된 Client Network를 위한 별도 transport 구조입니다.
+
 ## 구성 A — Server가 공인 IP를 직접 가짐
 
 ```mermaid
@@ -43,6 +47,23 @@ flowchart LR
 ```
 
 Client에는 내부 IP가 아니라 **외부에서 보이는 public control/enrollment endpoint**를 사용해야 합니다.
+
+## Enterprise single-443를 Firewall/NAT 뒤에 둘 때
+
+single-443에서는 외부 Firewall이 TCP 443 frontend만 전달하고, 내부 backend는 FRP Server의 loopback에 남겨둡니다.
+
+```text
+Public Firewall TCP 443   -> FRP Server TCP 443 frontend
+FRP Server 127.0.0.1:7000 -> frps backend
+FRP Server 127.0.0.1:6099 -> Enrollment/Management backend
+Published service ports    -> 6000-6098 (가능하면 1:1)
+```
+
+<Warning>
+  **Enterprise single-443에서는 Public TCP 7000이나 6099를 DNAT하지 마세요.** 이 둘은 해당 topology에서 내부 backend listener입니다. 외부에 직접 노출하면 single-443의 보안/운영 경계를 우회하게 됩니다.
+</Warning>
+
+Server가 NAT 뒤에 있을 때는 **Public Port**와 **Local Listen/Backend Port**를 구분해야 합니다. Client에는 반드시 외부에서 실제로 보이는 public endpoint를 사용하고, Firewall에서는 그 endpoint를 의도한 내부 listener로 전달합니다.
 
 ## Published service port는 가능하면 1:1
 

@@ -19,6 +19,14 @@ FRP Auto Deploy 서버는 인터넷의 공인 진입점입니다. 공식 `frps`�
 
 ## 먼저 토폴로지를 고르세요
 
+기존 실사용 가이드의 구성도를 먼저 보면 Direct, NAT 뒤 Direct, Enterprise single-443의 차이를 훨씬 쉽게 이해할 수 있습니다.
+
+![FRP Auto Deploy 배포 방식: Direct, NAT, Enterprise single-443](/images/guides/deployment-modes.webp)
+
+<Note>
+  그림은 **Direct**, **NAT 뒤 Direct**, **Enterprise single-443**의 네트워크 배치를 비교합니다. NAT 자체가 세 번째 제품 모드는 아니며 실제 제품 모드는 Direct와 Enterprise single-443 두 가지입니다.
+</Note>
+
 ```mermaid
 flowchart TD
     A[시작] --> B{서버가 인터넷 트래픽을\n직접 받을 수 있나요?}

@@ -19,6 +19,14 @@ Other Linux families have different validation levels; see [Supported Platforms]
 
 ## Choose the topology first
 
+The original field guide summarized the three common network layouts in one diagram. Use it as a visual map before choosing the actual product mode.
+
+![FRP Auto Deploy deployment layouts: Direct, NAT, and Enterprise single-443](/images/guides/deployment-modes.webp)
+
+<Note>
+  The diagram shows **Direct**, **Direct behind NAT**, and **Enterprise single-443** as network layouts. NAT itself is not a third product mode; the product modes are Direct and Enterprise single-443.
+</Note>
+
 ```mermaid
 flowchart TD
     A[Start] --> B{Can the server receive\npublic Internet traffic?}

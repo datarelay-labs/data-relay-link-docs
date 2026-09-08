@@ -88,6 +88,33 @@ flowchart LR
 
 The FRP client only needs normal IP reachability to those target hosts.
 
+## Practical examples from the field guide
+
+The same client can publish its own services and services on other LAN hosts at the same time. Typical examples:
+
+| Use case | Target from the FRP client | Example |
+| --- | --- | --- |
+| Client SSH | `127.0.0.1:22` | administer the client itself |
+| Client HTTPS | `127.0.0.1:443` | local web UI |
+| Other LAN server SSH | `10.10.10.20:22` | administer a server behind the same firewall |
+| Other LAN server HTTP | `10.10.10.30:80` | internal web application |
+| Grafana | `10.10.10.40:3000` | monitoring UI |
+| Internal API | `10.10.10.50:8080` | application-specific TCP client |
+| PostgreSQL | `10.10.10.60:5432` | database client; keep DB authentication/ACLs enabled |
+
+Before adding a LAN target, prove that the **FRP client itself** can reach it:
+
+```bash
+nc -vz -w 3 10.10.10.20 22
+nc -vz -w 3 10.10.10.30 80
+```
+
+If this test fails, FRP cannot fix the client-to-LAN routing, target firewall, or target application. Resolve that path first, then publish the service.
+
+<Note>
+  You do not need a separate FRP client on every LAN host. A single enrolled client can act as a small gateway for hosts it can legitimately reach, which is useful for a few to a few dozen systems. Keep the scope deliberate rather than turning it into broad network exposure.
+</Note>
+
 ## HTTPS is passthrough
 
 ```mermaid

@@ -20,6 +20,7 @@ FRP Auto Deploy는 **immutable stable release**와 mutable `main` branch를 구�
 | Release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
 | Qualified candidate | `2140be5b6342c3651c16a458f8ea1bc9b577d992` |
 | Full Real E2E | **동일 exact candidate HEAD에서 PASS / PASS** |
+| 현재 Product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` (PR #14 종료 후) |
 
 Qualified candidate와 v2.2.1 release tree는 동일했습니다. 이미 공개된 v2.2.0은 historical release로 그대로 유지되며 retag하지 않았습니다.
 
@@ -49,10 +50,28 @@ Post-release 문서 복구 단계 `CANONICAL_PRODUCT_MASTER_RESTORE_V2_2_1_DOCS_
 
 손상/축약된 2,173-line derivative는 **PR #12**를 통해 Owner-reconstructed full integrated Product Master(약 3,625 lines)로 교체됐습니다. 복구된 authoritative 문서는 `docs/PRODUCT_MASTER.md`이며, 불완전한 surgical PR #13은 superseded 상태로 종료됐습니다.
 
-문서-only merge로 repository `main`은 v2.2.1 release commit에서 `343f292…`까지 전진했지만 immutable v2.2.1 tag와 release payload는 변경하지 않았습니다. 따라서 stable install identity는 계속 \*\*v2.2.1 / `19d4b6f…`\*\*이고 repository `main` HEAD만 더 최신입니다.
+Product Master 문서-only merge로 product repository `main`은 v2.2.1 release commit에서 `343f292…`까지 전진했지만 immutable v2.2.1 tag와 release payload는 변경하지 않았습니다. 이후 README/CI housekeeping PR #14가 `main`을 `c7fe407…`까지 전진시켰습니다. 그 과정에서도 stable install identity는 계속 \*\*v2.2.1 / `19d4b6f…`\*\*이며 release/tag는 그대로입니다.
+
+## PR #14 CI 및 repository housekeeping 종료
+
+후속 단계 `PR14_CI_AND_REPO_HOUSEKEEPING_CLOSURE`도 **PASS**로 종료됐습니다.
+
+| 항목 | 결과 |
+| --- | --- |
+| 최종 Product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` |
+| PR #14 | **MERGED** |
+| Required checks | **PASS** — lint + 7개 distro job 전체 |
+| macOS workflow | **PASS** — docs/dist parity 수정 후 정상, client-port 제품 regression 아님 |
+| Windows workflow | **PASS** |
+| Product runtime file 변경 | **NO** |
+| Full Real E2E 재실행 | **NO** |
+| 새 release/tag 변경 | **NO** |
+| 오래된 PR #1 / #2 | **Superseded로 CLOSED** |
+| 최종 repository 상태 | **CLEAN** |
+| Owner action / manual E2E | **불필요** |
 
 <Note>
-  `docs/GITHUB_SETUP.md`의 stale-state 정리는 이번 closure에서 완료되지 않았습니다(`GITHUB_SETUP_STALE_STATE_FIXED=NO`). 이는 문서 follow-up이며 v2.2.1 runtime, release tag, 검증된 platform claim에는 영향을 주지 않습니다.
+  이전 `docs/GITHUB_SETUP.md` follow-up은 오래된 경로를 전제로 한 항목이었습니다. 실제 파일은 root `GITHUB_SETUP.md`이고 이미 v2.2.1 기준으로 정상이며 `docs/GITHUB_SETUP.md`는 존재하지 않습니다. 최종 결과는 \*\*`GITHUB_SETUP_STALE_STATE_NOT_APPLICABLE=YES`\*\*입니다.
 </Note>
 
 ```mermaid

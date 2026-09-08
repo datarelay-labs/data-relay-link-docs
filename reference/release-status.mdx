@@ -18,7 +18,7 @@ FRP Auto Deploy separates the immutable stable release from the mutable `main` b
 | Release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
 | Qualified candidate | `2140be5b6342c3651c16a458f8ea1bc9b577d992` |
 | Full Real E2E | **PASS / PASS on the same exact candidate HEAD** |
-| `main` | may advance with post-release development or docs-only commits |
+| Product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` after PR #14 housekeeping closure |
 
 The qualified candidate and the v2.2.1 release tree were identical. Published v2.2.0 remains an immutable historical release and was not retagged.
 
@@ -48,10 +48,28 @@ The post-release documentation restoration phase **`CANONICAL_PRODUCT_MASTER_RES
 
 The damaged/truncated 2,173-line derivative was replaced by the Owner-reconstructed full integrated Product Master (approximately 3,625 lines) through **PR #12**. The restored authoritative document is `docs/PRODUCT_MASTER.md`. The incomplete surgical PR #13 was superseded and closed.
 
-The documentation-only merge advanced `main` from the v2.2.1 release commit to `343f292…` without changing the immutable v2.2.1 tag or the release payload. This is why the **stable install identity remains v2.2.1 / `19d4b6f…`**, while the repository `main` HEAD is newer.
+The Product Master documentation-only merge advanced product `main` from the v2.2.1 release commit to `343f292…` without changing the immutable v2.2.1 tag or release payload. A later README/CI housekeeping closure, PR #14, advanced product `main` again to `c7fe407…`. The **stable install identity remains v2.2.1 / `19d4b6f…`** throughout.
+
+## PR #14 CI and repository housekeeping closure
+
+The follow-up phase `PR14_CI_AND_REPO_HOUSEKEEPING_CLOSURE` also finished with **PASS**.
+
+| Item | Result |
+| --- | --- |
+| Final product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` |
+| PR #14 | **MERGED** |
+| Required checks | **PASS** — lint + all 7 distro jobs |
+| macOS workflow | **PASS** after correcting docs/dist parity; no client-port product regression |
+| Windows workflow | **PASS** |
+| Product runtime files changed | **NO** |
+| Full Real E2E rerun | **NO** |
+| New release/tag change | **NO** |
+| Old PR #1 / #2 | **CLOSED as superseded** |
+| Final repository state | **CLEAN** |
+| Owner action / manual E2E required | **NO** |
 
 <Note>
-  `docs/GITHUB_SETUP.md` stale-state cleanup was not completed in this closure (`GITHUB_SETUP_STALE_STATE_FIXED=NO`). It is a documentation follow-up and does not change the v2.2.1 runtime, release tag, or validated platform claims.
+  The earlier `docs/GITHUB_SETUP.md` follow-up was based on a stale path. The actual file is root `GITHUB_SETUP.md`, which was already current for v2.2.1; `docs/GITHUB_SETUP.md` does not exist. Final result: **`GITHUB_SETUP_STALE_STATE_NOT_APPLICABLE=YES`**.
 </Note>
 
 ## Use stable for field installs
