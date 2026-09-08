@@ -99,6 +99,10 @@ Networking
 → VCN with Internet Connectivity
 ```
 
+![OCI Start VCN Wizard with VCN with Internet Connectivity selected](https://docs.oracle.com/en/applications/jd-edwards/tutorial-create-virtual-cloud-netwrok/img/wizard_selection.jpg)
+
+_Visual landmark: choose **VCN with Internet Connectivity**, then start the wizard. Oracle may move labels slightly as the Console UI evolves._
+
 Simple example:
 
 ```text
@@ -157,6 +161,10 @@ Confirm the Always Free Eligible label
 - Let OCI assign the primary private IPv4 automatically.
 - Prefer **Do not assign a public IPv4 address** at this step.
 
+![OCI instance network configuration showing public IPv4 controls and SSH key section](https://docs.oracle.com/ko/learn/assign-ip-sec-vnics/images/02d971bdc56d635b10861dc2b63f52ab.png)
+
+_Visual landmark: this Oracle Console example shows where the primary VNIC public-IPv4 choice appears. For this guide, leave automatic public IPv4 assignment off and attach the Reserved Public IP in the next step._
+
 The next step attaches a Reserved Public IP directly, avoiding a temporary ephemeral IP first.
 
 ### SSH key
@@ -186,6 +194,10 @@ Compartment   <your compartment>
 IP source     Oracle pool (default)
 ```
 
+![OCI Reserve Public IP Address dialog example](https://cdn.hashnode.com/res/hashnode/image/upload/v1676583862771/5bf143c9-3f83-453a-bff4-63bb24df4496.png?auto=compress%2Cformat&format=webp)
+
+_Visual landmark: the dialog asks for a name, compartment, and IP source. The exact styling may differ in the current OCI Console; use Oracle's current [Reserved Public IP documentation](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-create.htm) as the final UI reference._
+
 Unlike an ephemeral public IP, a Reserved Public IP is a persistent regional object. It can be unassigned and reassigned to another compatible private IP in the same region.
 
 ```mermaid
@@ -214,6 +226,10 @@ Compute
 → choose frp-server-ip
 → Update
 ```
+
+![OCI Edit Public IP screen showing No Public IP, Ephemeral Public IP, and Reserved Public IP choices](https://cdn-images-1.readmedium.com/v2/resize%3Afit%3A800/1%2Ar32ahb6-wxkD7qTEV15-GQ.png)
+
+_Visual landmark: edit the primary private IP and choose **Reserved Public IP**. Oracle's current documentation requires the private IP to have no other public-IP object attached first._
 
 <Note>
   If the VNIC private IP already has an ephemeral or reserved public IP, remove/unassign it first. OCI allows only one public-IP object on that private IP at a time.
@@ -255,6 +271,10 @@ FRP Auto Deploy does **not** modify OCI Security Lists or NSGs for you.
 | FRP control (Direct) | TCP | 443 | required client networks or Internet |
 | Enrollment / management (Direct) | TCP | 6099 | required client networks or Internet |
 | Published services | TCP | 6000-6098 | only sources that need access |
+
+![OCI Add Ingress Rules dialog in a Security List](https://livelabs.oracle.com/cdn/security/oci-network-firewall/common/images/update-ingress-rules-security-list-spoke-vcn.png)
+
+_Visual landmark: open the Security List or NSG attached to the public subnet/VNIC, choose **Add Ingress Rules**, then set source CIDR, protocol, and destination port range. The screenshot is an Oracle LiveLabs example; use the narrower FRP-specific rules in the table above rather than copying the example's broad `All Protocols` rule._
 
 <Warning>
   Avoid leaving SSH TCP/22 open to `0.0.0.0/0` longer than necessary. Restrict it to your administrator public IP `/32` when practical.
