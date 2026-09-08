@@ -134,6 +134,38 @@ Open the **Subnets** tab and select **Create Subnet**.
 
 ![Picture 10. Start creating the public subnet](/images/oci/Picture10.png)
 
+### 2-5. Configure the public subnet
+
+Create the public subnet with the following values:
+
+```text
+Name           frp-public-subnet
+Subnet Type    Regional
+IPv4 CIDR      10.0.0.0/24
+Route Table    Default Route Table for frp-vcn
+Subnet Access  Public Subnet
+```
+
+![Picture 11. Configure the public subnet](/images/oci/Picture11.png)
+
+### 2-6. Configure the Security List
+
+Open the VCN's **Security Lists** page.
+
+![Picture 12. Open the VCN Security Lists page](/images/oci/Picture12.png)
+
+Review the ingress rules on the **Default Security List**.
+
+![Picture 13. Review the Default Security List ingress rules](/images/oci/Picture13.png)
+
+For FRP Auto Deploy in single-443 mode, add TCP 443 and the published-service range TCP 6000-6098. Keep SSH 22 for administration, preferably restricted to your administrator public IP `/32`.
+
+![Picture 14. Add ingress rules for TCP 443 and TCP 6000-6098](/images/oci/Picture14.png)
+
+Confirm that the ingress rules were applied.
+
+![Picture 15. Confirm the applied ingress rules](/images/oci/Picture15.png)
+
 ### Recommended single-443 ingress
 
 | Protocol | Destination port | Source | Purpose |
@@ -161,23 +193,31 @@ Subnet         frp-public-subnet
 Boot volume    default
 ```
 
+Before creating the Compute Instance, confirm that the VCN, Internet Gateway, route, public subnet, and Security List created above are ready, then open **Compute → Instances**.
+
+![Picture 16. Confirm the network resources and open Compute](/images/oci/Picture16.png)
+
 ### 3-1. Enter the basic Compute Instance settings
 
 Start on **Create compute instance** and confirm the instance name and placement.
 
-![OCI Compute Instance basic settings](/images/oci/compute-basic.webp)
+![Picture 17. Compute Instance basic settings](/images/oci/Picture17.png)
 
 ### 3-2. Select Canonical Ubuntu 24.04
 
-Choose **Change image**, select Canonical Ubuntu, and use the Ubuntu 24.04 LTS x86_64 image. Treat the image/version currently shown in OCI Console as authoritative.
+Choose **Change image** and select Canonical Ubuntu 24.04. Treat the image/version currently shown in OCI Console as authoritative.
 
-![Select Canonical Ubuntu 24.04 in OCI](/images/oci/select-ubuntu.webp)
+![Picture 18. Select the Ubuntu image](/images/oci/Picture18.png)
+
+Unless your environment requires something different, keep the Security settings at their defaults.
+
+![Picture 19. Security settings - use the defaults unless required otherwise](/images/oci/Picture19.png)
 
 ### 3-3. Select the VCN and public subnet
 
 Under Primary VNIC, select the `frp-vcn` and `frp-public-subnet` created earlier.
 
-![Select frp-vcn and the public subnet in OCI](/images/oci/select-vcn-subnet.webp)
+![Picture 20. Select the existing frp-vcn and frp-public-subnet](/images/oci/Picture20.png)
 
 ### 3-4. Disable automatic public IPv4 and configure the SSH key
 
