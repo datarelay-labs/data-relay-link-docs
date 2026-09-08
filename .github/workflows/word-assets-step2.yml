@@ -1,0 +1,41 @@
+name: word-assets-step2
+
+on:
+  push:
+    branches:
+      - docs/word-original-assets-step2b
+    paths:
+      - '.asset-upload/**'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ hashFiles('.asset-upload/READY') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/word-original-assets-step2b
+      - name: Rebuild original PNG assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p images/word-originals/oci
+          cat .asset-upload/vcn/part-* | base64 -d > images/word-originals/oci/oci-vcn-create.png
+          cat .asset-upload/internet/part-* | base64 -d > images/word-originals/oci/oci-internet-gateway.png
+          cat .asset-upload/route/part-* | base64 -d > images/word-originals/oci/oci-route-rule.png
+          echo '5761f7425b7b145acf6ba94e7462cdde78dbaea8a1b901859daf4b33a0a26c0d  images/word-originals/oci/oci-vcn-create.png' | sha256sum -c -
+          echo 'a8f7f4caa1f9c4e3da8e0a666a2f0a83d2cf1239229909a76e8a1dff5abcb289  images/word-originals/oci/oci-internet-gateway.png' | sha256sum -c -
+          echo '074b342fc455428dc0076092af4e5b304b0653f9fb249815ac18512c80513c08  images/word-originals/oci/oci-route-rule.png' | sha256sum -c -
+      - name: Commit original PNG assets and remove staging files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .asset-upload .github/workflows/word-assets-step2.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs: add original Word OCI assets step 2A'
+          git push origin HEAD:docs/word-original-assets-step2b
