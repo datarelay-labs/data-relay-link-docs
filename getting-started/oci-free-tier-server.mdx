@@ -14,304 +14,175 @@ keywords:
   - "FRP server"
 ---
 
-# OCI Free Tier Server Preparation
+# OCI Free Tier FRP Server
 
-FRP Auto Deploy needs a **publicly reachable server entry point**. If you do not have a static public IP at home or the office, and you do not want to pay for a separate VPS, an Oracle Cloud Infrastructure (OCI) Always Free-eligible Linux VM can be a practical FRP server host.
+This guide takes you from an empty OCI tenancy to a working **FRP Auto Deploy v2.2.1** server and the first SSH client. It reuses the actual OCI Console screenshots from the original `frp.datarelay.run` deployment guide, while updating all FRP commands and product behavior to the current stable release.
 
-This page stops **before installing FRP Auto Deploy**. The goal is to prepare the Linux server, networking, SSH access, and persistent public IPv4 address.
+<Note>
+  OCI Console labels, Free Tier eligibility, capacity, and pricing can change. Treat the current Console's **Always Free Eligible** indicator and cost estimate as the final source before creating resources.
+</Note>
 
-```mermaid
-flowchart LR
-    U[Remote users / clients]
-    IP[OCI Reserved Public IPv4\npersistent public address]
-    IG[OCI Internet Gateway\n1:1 public/private NAT]
-    VM[Ubuntu 24.04 VM\nready for FRP Auto Deploy]
-
-    U -->|Internet| IP
-    IP --> IG
-    IG --> VM
-```
-
-<Check>
-  A DNS name is optional. You can start with only the reserved public IP and the assigned FRP service ports, then add a hostname later.
-</Check>
-
-## What this solves
-
-| Concern | OCI approach |
-| --- | --- |
-| No static public IP | Use an OCI **Reserved Public IPv4** |
-| No spare public Linux server | Use an **Always Free-eligible VM** |
-| No domain name | Use the public IP directly at first |
-| Worried the address will change | Reserved Public IP exists independently of the instance lifecycle |
-| Home-router NAT is difficult | OCI provides a public subnet and Internet Gateway |
-
-## Recommended configuration
-
-For the current FRP Auto Deploy stable support boundary, use this conservative configuration:
-
-| Item | Recommended value | Why |
-| --- | --- | --- |
-| Region | **Tenancy Home Region** | Always Free Compute must be created in the home region |
-| Shape | **VM.Standard.E2.1.Micro (AMD/x86_64)** | Always Free eligible and aligned with the stable x86_64 Linux path |
-| Image | **Ubuntu 24.04 LTS x86_64** | Matches the real-VM validation baseline |
-| Boot volume | Default size | Keeps storage simple and within Always Free allocation |
-| Subnet | **Public subnet** | Required for a public IPv4 assignment |
-| Public IPv4 | **Reserved** | Persistent address independent of VM lifecycle |
-| SSH | TCP/22 from your admin IP only | Initial administration |
-| FRP Direct | TCP/443, 6099, and service ports | Default deployment path |
-
-<Warning>
-  OCI Free Tier policies and tenancy limits can change. Before creating resources, confirm the **Always Free Eligible** label and the cost estimate shown in the OCI Console. Capacity also varies by home region.
-</Warning>
-
-## Why E2.1.Micro instead of Ampere A1?
-
-OCI also offers Arm-based `VM.Standard.A1.Flex` under its Always Free program. FRP Auto Deploy, however, does **not currently advertise native ARM64 systemd as field-validated stable support**.
+## What you will build
 
 ```mermaid
 flowchart TD
-    A[Choose a free OCI VM] --> B{Prioritize stable support?}
-    B -->|Yes| X[AMD E2.1.Micro\nx86_64 recommended]
-    B -->|No, experimental validation is acceptable| Y[Ampere A1\nARM64 needs separate validation]
+    U[Remote user] -->|SSH / HTTP / HTTPS / TCP service port| PUB[OCI Reserved Public IPv4]
+    C[Remote FRP client\nbehind NAT/firewall] -->|Outbound TCP 443 / WSS| PUB
+    PUB --> VM[Ubuntu 24.04\nFRP Auto Deploy server]
+    VM -->|public 443| FE[single-443 frontend]
+    FE -->|loopback 7000| FRPS[frps]
+    FE -->|loopback 6099| ENR[Enrollment / management]
+    VM --> PORTS[Published service ports\n6000-6098]
 ```
 
-For a first-time deployment, use **x86_64 E2.1.Micro** when capacity is available.
+For this OCI walkthrough we use **Enterprise single-443** because it gives a simple public policy:
 
-## 1. Create the OCI account and choose the Home Region
+| Public ingress | Purpose |
+| --- | --- |
+| TCP 22 | OCI server administration; restrict to your admin IP `/32` |
+| TCP 443 | FRP control over WSS + enrollment/management HTTPS |
+| TCP 6000-6098 | Published client services; restrict further when practical |
+| TCP 6099 | **Do not expose** in single-443 |
+| TCP 7000 | **Do not expose** in single-443 |
 
-Choose the **Home Region** carefully when creating the tenancy. Oracle documents that Always Free Compute instances must be created in that home region.
+Direct mode is also fully supported. In Direct mode, TCP 6099 is a separate public enrollment/management endpoint.
 
-If OCI reports `Out of host capacity`, try another Availability Domain when possible or try again later.
+## 10-minute map
 
-<Note>
-  OCI account registration may require a mobile number and payment-card verification. Always Free resources are distinct from time-limited Free Trial credits, but the OCI Console at creation time is the final source for eligibility and billing status.
-</Note>
+| Step | OCI / FRP action | Value used in this guide |
+| --: | --- | --- |
+| 1 | Create VCN | `frp-vcn` / `10.0.0.0/16` |
+| 2 | Internet Gateway + route | `0.0.0.0/0` → Internet Gateway |
+| 3 | Create public subnet | `frp-public-subnet` / `10.0.0.0/24` |
+| 4 | Security List | admin SSH, `443`, `6000-6098` |
+| 5 | Create VM | Ubuntu 24.04 x86_64 / `VM.Standard.E2.1.Micro` when eligible |
+| 6 | Public address | attach a **Reserved Public IPv4** |
+| 7 | SSH | `ubuntu@<RESERVED-IP>` |
+| 8 | Install FRP Auto Deploy | immutable `v2.2.1` |
+| 9 | Verify | `frpctl doctor` + listener checks |
+| 10 | Add first client | current one-line Zero-Touch enrollment |
 
-## 2. Create a VCN with Internet connectivity
+# Part I — Build the OCI network and VM
 
-In the OCI Console:
+## 1. Open Virtual Cloud Networks
+
+From the OCI Home page, enter **Networking → Virtual Cloud Networks**. The original Console screenshots below show the landmarks and the exact values used in the field deployment.
+
+## 2. Create the VCN, Internet Gateway, route, subnet, and ingress rules
+
+Use these values:
 
 ```text
-Networking
-→ Virtual Cloud Networks
-→ Start VCN Wizard
-→ VCN with Internet Connectivity
+VCN name             frp-vcn
+VCN IPv4 CIDR         10.0.0.0/16
+Internet Gateway      frp-internet-gateway
+Default route         0.0.0.0/0 -> Internet Gateway
+Public subnet         frp-public-subnet
+Public subnet CIDR    10.0.0.0/24
+Subnet type           Regional / Public
 ```
 
-![OCI Start VCN Wizard with VCN with Internet Connectivity selected](https://docs.oracle.com/en/applications/jd-edwards/tutorial-create-virtual-cloud-netwrok/img/wizard_selection.jpg)
+![Original OCI Console screenshots: VCN, Internet Gateway, route table, public subnet, and Security List](/images/guides/oci-networking.webp)
 
-_Visual landmark: choose **VCN with Internet Connectivity**, then start the wizard. Oracle may move labels slightly as the Console UI evolves._
+The screenshots cover the same sequence as the original guide:
 
-Simple example:
+1. **Virtual Cloud Networks → Create VCN**
+2. create `frp-vcn` with `10.0.0.0/16`
+3. **Gateways → Create Internet Gateway**
+4. **Routing → Default Route Table → Add Route Rules**
+5. route `0.0.0.0/0` to `frp-internet-gateway`
+6. **Subnets → Create Subnet**
+7. create `frp-public-subnet` with `10.0.0.0/24`, using the VCN default route table
+8. **Security → Default Security List → Add Ingress Rules**
 
-```text
-VCN CIDR          10.0.0.0/16
-Public subnet     10.0.0.0/24
-Private subnet    10.0.1.0/24
-DNS resolution    Enabled
-```
+### Recommended single-443 ingress
 
-The wizard normally creates the required Internet-facing network components.
-
-```mermaid
-flowchart LR
-    I[Internet]
-    G[Internet Gateway]
-    P[Public subnet\n10.0.0.0/24]
-    V[FRP server VM]
-
-    I <--> G
-    G <--> P
-    P <--> V
-```
-
-Place the FRP server VM in the **public subnet**.
-
-## 3. Create the Ubuntu VM
-
-In the OCI Console:
-
-```text
-Compute
-→ Instances
-→ Create instance
-```
-
-### Image
-
-Recommended:
-
-```text
-Ubuntu 24.04 LTS
-Architecture: x86_64 / AMD
-```
-
-### Shape
-
-```text
-VM.Standard.E2.1.Micro
-Confirm the Always Free Eligible label
-```
-
-### Networking
-
-- Select the VCN you created.
-- Select the **public subnet**.
-- Let OCI assign the primary private IPv4 automatically.
-- Prefer **Do not assign a public IPv4 address** at this step.
-
-![OCI instance network configuration showing public IPv4 controls and SSH key section](https://docs.oracle.com/ko/learn/assign-ip-sec-vnics/images/02d971bdc56d635b10861dc2b63f52ab.png)
-
-_Visual landmark: this Oracle Console example shows where the primary VNIC public-IPv4 choice appears. For this guide, leave automatic public IPv4 assignment off and attach the Reserved Public IP in the next step._
-
-The next step attaches a Reserved Public IP directly, avoiding a temporary ephemeral IP first.
-
-### SSH key
-
-Upload/paste your existing public key, or let OCI generate a key pair.
+| Protocol | Destination port | Source | Purpose |
+| --- | --: | --- | --- |
+| TCP | 22 | **your admin public IP/32** | SSH administration |
+| TCP | 443 | client networks or `0.0.0.0/0` if required | WSS control + enrollment/management |
+| TCP | 6000-6098 | only networks/users that need the services | published services |
 
 <Warning>
-  If OCI generates the key pair, store the private key safely. Do not assume you can download the same private key later.
+  In **single-443** mode, do not create public OCI ingress or DNAT for **6099** or **7000**. They are internal loopback backends. Also do not blindly copy a broad `All Protocols` rule from a generic OCI tutorial.
 </Warning>
 
-## 4. Create a Reserved Public IPv4
+If you do not want the whole `6000-6098` range exposed, allow only the service ports that are actually assigned, and constrain source CIDRs where possible.
 
-In the OCI Console:
+## 3. Create the Ubuntu compute instance
 
-```text
-Networking
-→ IP management
-→ Reserved public IPs
-→ Reserve public IP address
-```
-
-Example:
+Recommended values for this walkthrough:
 
 ```text
-Name          frp-server-ip
-Compartment   <your compartment>
-IP source     Oracle pool (default)
+Name           frp-server
+Image          Canonical Ubuntu 24.04 LTS x86_64
+Shape          VM.Standard.E2.1.Micro (when Console marks it eligible/free)
+VCN            frp-vcn
+Subnet         frp-public-subnet
+Boot volume    default
 ```
 
-![OCI Reserve Public IP Address dialog example](https://cdn.hashnode.com/res/hashnode/image/upload/v1676583862771/5bf143c9-3f83-453a-bff4-63bb24df4496.png?auto=compress%2Cformat&format=webp)
+![Original OCI Console screenshots: create Ubuntu instance, choose VCN/subnet, disable automatic public IPv4, and save the SSH key](/images/guides/oci-compute.webp)
 
-_Visual landmark: the dialog asks for a name, compartment, and IP source. The exact styling may differ in the current OCI Console; use Oracle's current [Reserved Public IP documentation](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-create.htm) as the final UI reference._
+Important points from the original deployment:
 
-Unlike an ephemeral public IP, a Reserved Public IP is a persistent regional object. It can be unassigned and reassigned to another compatible private IP in the same region.
+- choose the existing `frp-vcn`
+- choose `frp-public-subnet`
+- allow OCI to assign the **private IPv4** automatically
+- turn off **Automatically assign public IPv4 address** for the final persistent-IP design
+- generate/download or upload an SSH public key
+- if OCI generated the key pair, store the private key securely; do not assume it can be downloaded again later
+- keep the boot volume simple unless you have another storage requirement
 
-```mermaid
-stateDiagram-v2
-    [*] --> ReservedIP
-    ReservedIP --> VM1: assign
-    VM1 --> ReservedIP: unassign
-    ReservedIP --> VM2: reassign
-```
+<Warning>
+  `VM.Standard.E2.1.Micro` availability and Free Tier treatment are tenancy/region dependent. If the Console does not show it as eligible at creation time, do not assume this guide makes it free.
+</Warning>
 
-## 5. Attach the Reserved Public IP to the VM
+## 4. Attach a Reserved Public IPv4
 
-Oracle's current Console flow is:
+After the instance exists:
 
 ```text
 Compute
 → Instances
-→ <FRP server instance>
+→ frp-server
 → Networking
-→ Attached VNICs
-→ <Primary VNIC>
+→ Primary / Attached VNIC
 → IP administration
-→ <Primary private IP> ... → Edit
-→ Public IP type: Reserved public IP
-→ Select Existing Reserved IP Address
-→ choose frp-server-ip
-→ Update
+→ Primary private IPv4
+→ Edit
 ```
 
-![OCI Edit Public IP screen showing No Public IP, Ephemeral Public IP, and Reserved Public IP choices](https://cdn-images-1.readmedium.com/v2/resize%3Afit%3A800/1%2Ar32ahb6-wxkD7qTEV15-GQ.png)
-
-_Visual landmark: edit the primary private IP and choose **Reserved Public IP**. Oracle's current documentation requires the private IP to have no other public-IP object attached first._
-
-<Note>
-  If the VNIC private IP already has an ephemeral or reserved public IP, remove/unassign it first. OCI allows only one public-IP object on that private IP at a time.
-</Note>
-
-## 6. Why does Linux only show a private IP?
-
-OCI public IPv4 is not configured directly on the guest OS NIC. OCI provides one-to-one NAT between the public IPv4 and the VNIC's private IPv4.
-
-```mermaid
-flowchart LR
-    PUB[Reserved Public IPv4\n203.0.113.10]
-    OCI[OCI Internet Gateway\n1:1 NAT]
-    PRI[VM private IPv4\n10.0.0.10]
-    OS[Ubuntu ip addr]
-
-    PUB <--> OCI
-    OCI <--> PRI
-    PRI --> OS
-```
-
-So this is normal:
-
-```bash
-ip addr
-```
-
-shows `10.x.x.x`, while the persistent public address is visible in the OCI Console.
-
-## 7. Configure OCI Security List / NSG ingress
-
-FRP Auto Deploy does **not** modify OCI Security Lists or NSGs for you.
-
-### Safe starting rules
-
-| Purpose | Protocol | Port | Recommended source |
-| --- | --- | ---: | --- |
-| SSH administration | TCP | 22 | **your admin public IP/32** |
-| FRP control (Direct) | TCP | 443 | required client networks or Internet |
-| Enrollment / management (Direct) | TCP | 6099 | required client networks or Internet |
-| Published services | TCP | 6000-6098 | only sources that need access |
-
-![OCI Add Ingress Rules dialog in a Security List](https://livelabs.oracle.com/cdn/security/oci-network-firewall/common/images/update-ingress-rules-security-list-spoke-vcn.png)
-
-_Visual landmark: open the Security List or NSG attached to the public subnet/VNIC, choose **Add Ingress Rules**, then set source CIDR, protocol, and destination port range. The screenshot is an Oracle LiveLabs example; use the narrower FRP-specific rules in the table above rather than copying the example's broad `All Protocols` rule._
-
-<Warning>
-  Avoid leaving SSH TCP/22 open to `0.0.0.0/0` longer than necessary. Restrict it to your administrator public IP `/32` when practical.
-</Warning>
-
-If you want automatic service-port allocation without updating OCI rules every time, you can allow `6000-6098`. In stricter environments, open only the ports currently assigned to services and update firewall policy as services are added.
-
-### Enterprise single-443
-
-Typical public ingress:
+If an ephemeral public IP is currently attached, select **No public IP** first. Then edit again and choose:
 
 ```text
-TCP 443         enrollment + FRP control frontend
-TCP 6000-6098   published services
+Public IP type        Reserved public IP
+Option                Create new Reserved IP Address
+Name                  frp-reserved-public-ip
 ```
 
-Backend `6099` and `7000` remain loopback-only and must not be exposed to the Internet.
+![Original OCI Console screenshots: VNIC IP administration and Reserved Public IP creation/assignment](/images/guides/oci-reserved-ip.webp)
 
-## 8. SSH to Ubuntu
+A Reserved Public IP is the address you should treat as the persistent public entry point for FRP Auto Deploy. OCI performs the public/private mapping outside the Ubuntu guest, so `ip addr` on the VM normally shows the private `10.x.x.x` address rather than the public address.
 
-The default account for OCI Ubuntu images is typically `ubuntu`.
+## 5. Test SSH access
+
+For OCI Ubuntu images the default account is normally `ubuntu`:
 
 ```bash
-chmod 600 <your-private-key>
-ssh -i <your-private-key> ubuntu@<RESERVED_PUBLIC_IP>
+chmod 600 ~/Downloads/<private-key-file>
+ssh -i ~/Downloads/<private-key-file> ubuntu@<RESERVED-PUBLIC-IP>
 ```
 
-Verify the host:
+Then verify the host:
 
 ```bash
 uname -m
 cat /etc/os-release
 systemctl --version
-openssl version
 ```
 
-Recommended result:
+Expected for this guide:
 
 ```text
 Architecture   x86_64
@@ -319,86 +190,188 @@ OS             Ubuntu 24.04 LTS
 PID 1          systemd
 ```
 
-## 9. Perform basic Linux preparation
+# Part II — Install FRP Auto Deploy v2.2.1
 
-Before installing FRP Auto Deploy:
+## 6. Prepare only the packages you need
 
 ```bash
 sudo apt update
-sudo apt -y upgrade
 sudo apt -y install curl ca-certificates
 ```
 
-Check time synchronization:
+Check time and the host firewall before installation:
 
 ```bash
 timedatectl status
-```
-
-Large clock drift can cause TLS/enrollment problems.
-
-Check the local firewall too:
-
-```bash
 sudo ufw status
+sudo iptables -S INPUT
 ```
-
-If UFW is active, both the OCI network policy **and** UFW must allow the required ports. If UFW is inactive, this guide does not require enabling it just for FRP Auto Deploy.
-
-## 10. Final readiness check
-
-```mermaid
-flowchart TD
-    A[OCI VM Running] --> B{E2.1.Micro x86_64?}
-    B -->|Yes| C{Reserved Public IP assigned?}
-    C -->|Yes| D{SSH works externally?}
-    D -->|Yes| E{OCI ingress rules ready?}
-    E -->|Yes| F[Ready to install FRP Auto Deploy]
-    B -->|No| X[Check supported-platform guidance]
-    C -->|No| Y[Attach Reserved IP]
-    D -->|No| Z[Check VCN / route / SSH rule]
-    E -->|No| W[Configure Security List / NSG]
-```
-
-Checklist:
-
-- [ ] VM is in the **Home Region**
-- [ ] Shape is marked **Always Free Eligible**
-- [ ] Ubuntu 24.04 x86_64 is used
-- [ ] Public subnet + Internet Gateway are present
-- [ ] Reserved Public IPv4 is attached
-- [ ] SSH private key is safely stored
-- [ ] External SSH connection succeeds
-- [ ] OCI Security List/NSG is ready
-- [ ] `curl` and CA certificates are installed
-- [ ] System clock is healthy
-
-Continue to [Server Installation](/getting-started/server-installation).
-
-## Free-operation caveats
-
-### Idle Always Free instance reclamation
-
-Oracle's current Always Free documentation states that **idle compute instances may be reclaimed**. It describes a 7-day period of low CPU/network utilization, with memory utilization also considered for A1 shapes.
-
-A rarely used FRP gateway can therefore be affected by the provider's idle policy.
 
 <Warning>
-  If remote-access availability is business-critical, evaluate the availability tradeoff of Free Tier. Do not generate meaningless workload simply to defeat an idle-reclamation policy.
+  The older field notes contained an environment-specific procedure that flushed the Ubuntu `INPUT` chain. **Do not blindly run `iptables -F` or change the default INPUT policy just for FRP Auto Deploy.** OCI Security Lists/NSGs and the Ubuntu host firewall are separate security boundaries; configure each deliberately for your environment.
 </Warning>
 
-### Free Tier limits can change
+## 7. Install the immutable stable release
 
-OCI documentation and product pricing pages can change over time. This guide intentionally recommends the **x86_64 E2.1.Micro path marked Always Free Eligible in the Console** and treats the live Console eligibility/cost estimate as the final check before provisioning.
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/datarelay-labs/frp-auto-deploy/v2.2.1/dist/bootstrap-server.sh \
+  | sudo bash
+```
+
+For this OCI walkthrough, choose **Enterprise single-443** when the installer asks for topology. Conceptually the result is:
+
+```text
+Public host                  <RESERVED-PUBLIC-IP or DNS>
+Deployment mode              Enterprise single-443
+Public control               TCP 443
+FRP backend                  127.0.0.1:7000
+Public enrollment/management HTTPS 443
+Allocator backend            127.0.0.1:6099
+Published service range      TCP 6000-6098
+Pinned FRP                   0.71.0
+Project                       2.2.1
+```
+
+Do not copy the v2.1.0 environment-variable installation command from the old guide. The current field path is the immutable **v2.2.1** installer above and its current interactive questions.
+
+## 8. Verify the server
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl doctor
+```
+
+For single-443, also inspect the listeners:
+
+```bash
+sudo ss -lntp | grep -E ':(443|6099|7000)\b'
+```
+
+The important exposure model is:
+
+```text
+0.0.0.0:443       public frontend
+127.0.0.1:7000    frps backend
+127.0.0.1:6099    allocator backend
+```
+
+From another machine on the Internet:
+
+```bash
+nc -vz -w 3 <RESERVED-PUBLIC-IP> 443
+```
+
+`frpctl doctor` should have no blocking failure before onboarding clients.
+
+## 9. Verify reboot persistence
+
+```bash
+sudo reboot
+```
+
+After reconnecting:
+
+```bash
+sudo frpctl show status
+sudo frpctl doctor
+sudo ss -lntp | grep -E ':(443|6099|7000)\b'
+```
+
+The services and listener topology should return without re-enrollment or manual reconstruction.
+
+# Part III — Connect the first client
+
+## 10. Generate a Zero-Touch SSH enrollment
+
+On the FRP server:
+
+```bash
+sudo frpctl create enrollment \
+  --one-line \
+  --ssh \
+  --ssh-user <EXISTING-CLIENT-USER> \
+  --label <CLIENT-LABEL>
+```
+
+The command printed by the server contains a short-lived, one-time bootstrap credential. **Copy the exact generated command** to the remote client instead of reconstructing it manually.
+
+<Warning>
+  Treat a generated Zero-Touch command as sensitive until it expires or is used. Do not paste a live ticket into public chat, documentation, or issue trackers.
+</Warning>
+
+On the client, run the generated line. FRP Auto Deploy does not create the SSH user or `sshd`; they must already exist.
+
+## 11. Verify the client and connect
+
+On the client:
+
+```bash
+sudo frpctl show version
+sudo frpctl show status
+sudo frpctl show services
+sudo frpctl doctor
+```
+
+On the server:
+
+```bash
+sudo frpctl show clients
+sudo frpctl show client <CLIENT-ID>
+sudo frpctl show client <CLIENT-ID> services
+```
+
+Then use the assigned persistent public service port:
+
+```bash
+ssh -p <PUBLIC-SERVICE-PORT> <CLIENT-USER>@<RESERVED-PUBLIC-IP>
+```
+
+The **client does not manually choose the public port**. The FRP server allocates and persists the service reservation.
+
+# Final checklist
+
+- [ ] VCN `10.0.0.0/16` exists
+- [ ] Internet Gateway exists
+- [ ] default route has `0.0.0.0/0 → Internet Gateway`
+- [ ] public subnet `10.0.0.0/24` exists
+- [ ] admin SSH is restricted appropriately
+- [ ] public TCP 443 is reachable
+- [ ] service ports are allowed only as broadly as required
+- [ ] 6099/7000 are not publicly exposed in single-443
+- [ ] Ubuntu 24.04 x86_64 VM is running
+- [ ] Reserved Public IPv4 is attached
+- [ ] SSH to the VM succeeds
+- [ ] FRP Auto Deploy reports project 2.2.1 / pinned FRP 0.71.0
+- [ ] `frpctl doctor` has no blocking finding
+- [ ] listener exposure matches the selected topology
+- [ ] state survives reboot
+- [ ] first Zero-Touch client enrolls and the assigned SSH public port works
+
+## Troubleshooting split
+
+When a published service cannot be reached, test both halves independently:
+
+```bash
+# From an external workstation: Internet -> FRP server
+nc -vz -w 3 <RESERVED-PUBLIC-IP> <PUBLIC-SERVICE-PORT>
+
+# From the FRP client: client -> local/LAN target
+nc -vz -w 3 <TARGET-IP> <TARGET-PORT>
+```
+
+This quickly separates an OCI/public-ingress problem from a client-to-target problem.
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Install the FRP Server" icon="server" href="/getting-started/server-installation">
-    Install the stable FRP Auto Deploy server on the prepared OCI Ubuntu VM.
+  <Card title="Publish Services" icon="network-wired" href="/guides/services">
+    Add SSH, HTTP, HTTPS, custom TCP, or services on other LAN hosts.
   </Card>
+
   <Card title="Firewall & NAT" icon="shield-halved" href="/deployment/firewall-nat">
-    Understand public IP, NAT, and service-port behavior in more depth.
+    Compare Direct, public/listen NAT separation, and single-443.
   </Card>
 </CardGroup>
 
@@ -408,4 +381,4 @@ OCI documentation and product pricing pages can change over time. This guide int
 - [Launching Your First Linux Instance](https://docs.oracle.com/en-us/iaas/Content/Compute/tutorials/first-linux-instance/overview.htm)
 - [Public IP Addresses](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingpublicIPs.htm)
 - [Creating a Reserved Public IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-create.htm)
-- [Assigning a Reserved Public IP to a Private IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-assign.htm)
+- [Assigning a Reserved Public IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/reserved-public-ip-assign.htm)
