@@ -97,6 +97,7 @@
             "pages": [
               "security/overview",
               "reference/architecture",
+              "reference/alternatives",
               "reference/platforms",
               "reference/network-ports",
               "reference/release-status",

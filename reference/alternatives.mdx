@@ -1,0 +1,98 @@
+---
+title: "FRP and Managed Alternatives"
+sidebarTitle: "Compare Alternatives"
+description: "Compare FRP Auto Deploy with official FRP, ngrok, Cloudflare Tunnel, and Tailscale by operating model and use case."
+---
+
+# FRP and Managed Alternatives
+
+There is no single best remote-access tool. The right choice depends on whether you want a **self-hosted public reverse proxy**, a **managed Internet ingress**, or a **private overlay network**.
+
+This page compares operating models rather than benchmark performance or vendor pricing. Commercial product features and plan limits change frequently, so verify current vendor documentation before purchasing.
+
+## At a glance
+
+| Option | Primary model | Who operates the public edge/control plane? | Remote site needs inbound firewall opening? | Typical fit |
+| --- | --- | --- | --- | --- |
+| **FRP Auto Deploy** | Self-hosted FRP reverse proxy + enrollment/lifecycle layer | You | No, for the client side | A few to a few dozen remote systems where you want your own public server and predictable service ports |
+| **Official FRP** | Self-hosted reverse proxy/tunnel engine | You | No, for the client side | Engineers comfortable managing FRP configuration directly |
+| **ngrok** | Managed Internet ingress / agent endpoints | ngrok | Normally no | Development, webhooks, temporary or managed public endpoints, including TCP/SSH use cases |
+| **Cloudflare Tunnel** | Outbound connector to Cloudflare Zero Trust/global edge | Cloudflare | No | Public web applications and organization-managed private application access |
+| **Tailscale** | WireGuard-based private mesh network; optional Serve/Funnel | Tailscale coordination service | No | Private device-to-device or user-to-service connectivity across a team/tailnet |
+
+## Feature-oriented comparison
+
+| Capability | FRP Auto Deploy v2.2.1 | Official FRP | ngrok | Cloudflare Tunnel | Tailscale |
+| --- | --- | --- | --- | --- | --- |
+| Self-host the traffic entry server | **Yes** | **Yes** | No, managed ngrok edge | No, Cloudflare edge | Primarily managed coordination; peers form the data network |
+| Raw public TCP service such as SSH | **Yes** — assigned public TCP port | **Yes** | **Yes** — TCP endpoints | Possible, but public non-HTTP access uses Cloudflare client-side tooling rather than a plain public TCP port model | Private access is the primary model; public exposure uses Funnel |
+| Public web application ingress | TCP passthrough / public service port | HTTP/HTTPS proxy types available | Strong managed ingress focus | **Strong managed ingress focus** | Serve is private; Funnel can publish selected services |
+| Private overlay network between enrolled users/devices | No | No | Not the primary model | Available through Cloudflare Zero Trust private networking | **Core model** |
+| Central Zero-Touch enrollment for FRP clients | **Yes** | No equivalent FRP Auto Deploy lifecycle layer | Agent/account onboarding provided by ngrok | Connector and Zero Trust enrollment provided by Cloudflare | Device/tailnet enrollment provided by Tailscale |
+| Persistent service-port reservation managed by this product | **Yes** | Configured directly in FRP | Endpoint addressing is managed by ngrok | Hostname/route oriented | Tailnet IP/DNS oriented; Funnel/Serve use Tailscale service exposure |
+| Small-fleet client identity and service lifecycle | **Built in** | Mostly operator-managed configuration | Managed SaaS endpoint/account model | Managed Zero Trust dashboard/policy model | Managed tailnet/device/policy model |
+| Built-in per-service source-IP allowlist in **published v2.2.1** | **No** — use external firewall/ACL and target auth | Depends on FRP configuration/plugins | Traffic Policy features are available | Zero Trust/Gateway policies are available | Tailnet grants/ACL policy is a core capability |
+| SaaS account required for normal operation | **No** | **No** | **Yes** | **Yes** | **Yes** |
+| Intended management scale of this project | **About 1–50 clients** | Depends on your own operations | Vendor-managed service | Vendor-managed service | Vendor-managed service |
+
+<Note>
+  The rows above compare the normal product model, not every optional plugin, enterprise plan, API, or integration. In particular, **FRP Auto Deploy v2.2.1 should not be presented as a replacement for enterprise ZTNA, SASE, endpoint compliance, or a full VPN/mesh platform**.
+</Note>
+
+## When FRP Auto Deploy is a good fit
+
+Choose FRP Auto Deploy when these priorities matter together:
+
+- you want to own the FRP server and public IP
+- remote systems are behind NAT/firewalls and should connect outbound
+- support staff or partners need direct SSH/HTTP/HTTPS/custom-TCP access without first joining a VPN
+- a machine may publish multiple local or reachable LAN services
+- you want Zero-Touch enrollment, persistent CLIENT IDs, persistent public service ports, lifecycle controls, diagnostics, and backup/restore around official FRP
+- the environment is a **small fleet**, typically a few systems to a few dozen
+
+A common example is field support: install a client at a customer or branch location, let it establish the outbound tunnel, and give authorized support staff a predictable public endpoint for the published service.
+
+## When official FRP alone may be better
+
+Use official FRP directly when you want the tunnel engine without an additional management layer and are comfortable maintaining `frps`/`frpc` configuration yourself.
+
+Official FRP supports multiple proxy types including TCP, UDP, HTTP, HTTPS, STCP/SUDP, XTCP, and TCPMUX. FRP Auto Deploy intentionally exposes a narrower operational model centered on TCP services and managed client/service lifecycle.
+
+## When ngrok may be better
+
+ngrok is often a better fit when you prefer a managed public edge instead of operating your own FRP server. It is especially convenient for developer-facing public endpoints, webhooks, demos, and managed TCP endpoints such as SSH. ngrok also provides Traffic Policy capabilities for adding controls such as OAuth to supported endpoint flows.
+
+The tradeoff is that the ingress/control service is vendor-operated and plan/usage rules apply rather than being only your own server infrastructure.
+
+## When Cloudflare Tunnel may be better
+
+Cloudflare Tunnel is a strong fit when your organization already uses Cloudflare Zero Trust or wants applications to sit behind Cloudflare's edge. `cloudflared` creates outbound-only connections, so the origin does not need a publicly routable IP or inbound firewall opening.
+
+For private networks, users normally connect through Cloudflare One client/on-ramp mechanisms and policies can incorporate identity and device posture. For public applications, HTTP/HTTPS is a particularly natural fit. Public non-HTTP services do not behave like FRP Auto Deploy's simple `public-ip:port` model; Cloudflare documents client-side `cloudflared` requirements for non-HTTP published applications.
+
+## When Tailscale may be better
+
+Tailscale is usually the better choice when the main goal is **private network membership**, not publishing raw public service ports. It builds a mesh-style network on WireGuard and adds NAT traversal, identity, and access-control policy.
+
+Use Tailscale Serve to share a service inside the tailnet. Tailscale Funnel can publish selected local services to the public Internet, but the overall operating model remains different from a self-hosted FRP server with a persistent public service-port pool.
+
+## Decision guide
+
+| Requirement | Start with |
+| --- | --- |
+| Self-hosted public reverse proxy, small fleet, direct SSH/TCP from ordinary clients | **FRP Auto Deploy** |
+| Maximum FRP flexibility and manual configuration is acceptable | **Official FRP** |
+| Fast managed public endpoint for development/webhooks/demos | **ngrok** |
+| Cloudflare-centric public apps or Zero Trust private application access | **Cloudflare Tunnel** |
+| Private team/device mesh with identity-based network policy | **Tailscale** |
+
+## Official references
+
+- [FRP features](https://gofrp.org/en/docs/features/)
+- [ngrok TCP / SSH](https://ngrok.com/docs/using-ngrok-with/ssh)
+- [ngrok Cloud Endpoints](https://ngrok.com/docs/getting-started/cloud-endpoints-quickstart)
+- [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)
+- [Cloudflare private networks](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/private-net/)
+- [Tailscale WireGuard model](https://tailscale.com/docs/concepts/wireguard)
+- [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve)
+- [Tailscale Funnel](https://tailscale.com/kb/1223/funnel)
