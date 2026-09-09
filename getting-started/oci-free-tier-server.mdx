@@ -19,7 +19,7 @@ keywords:
 This guide takes you from an empty OCI tenancy to a working **FRP Auto Deploy v2.2.1** server and the first SSH client. It reuses the actual OCI Console screenshots from the original `frp.datarelay.run` deployment guide, while updating all FRP commands and product behavior to the current stable release.
 
 <Note>
-  OCI Console labels, Free Tier eligibility, capacity, and pricing can change. Treat the current Console's **Always Free Eligible** indicator and cost estimate as the final source before creating resources.
+  OCI Console labels, Free Tier eligibility, capacity, and pricing can change. Treat the current Console's **Always Free Eligible** indicator and cost estimate as the final source before creating resources. Oracle also documents that idle Always Free compute instances may be reclaimed after a sustained low-usage period, so do not treat a Free Tier VM as an SLA-backed production host without reviewing the current OCI policy.
 </Note>
 
 ## What you will build
@@ -34,6 +34,10 @@ flowchart TD
     FE -->|loopback 6099| ENR[Enrollment / management]
     VM --> PORTS[Published service ports\n6000-6098]
 ```
+
+The high-resolution architecture diagram below shows the same deployment from the operator's point of view: one OCI Reserved Public IP fronts the FRP Auto Deploy server, while each remote client publishes one or more local or reachable LAN services through its assigned persistent public ports.
+
+![FRP SSH access architecture using an OCI Reserved Public IP](/images/oci/53.png)
 
 For this OCI walkthrough we use **Enterprise single-443** because it gives a simple public policy:
 
