@@ -129,6 +129,7 @@
           {
             "group": "클라이언트 & 서비스",
             "pages": [
+              "ko/guides/enrollment",
               "ko/guides/zero-touch",
               "ko/guides/services",
               "ko/guides/ssh",
