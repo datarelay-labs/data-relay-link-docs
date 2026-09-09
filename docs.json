@@ -46,7 +46,8 @@
               "getting-started/quickstart",
               "getting-started/server-installation",
               "getting-started/linux-client",
-              "getting-started/macos-client"
+              "getting-started/macos-client",
+              "getting-started/windows-client"
             ],
             "icon": "rocket"
           },
@@ -117,7 +118,8 @@
               "ko/getting-started/oci-free-tier-server",
               "ko/getting-started/quickstart",
               "ko/getting-started/server-installation",
-              "ko/getting-started/linux-client"
+              "ko/getting-started/linux-client",
+              "ko/getting-started/macos-client"
             ],
             "icon": "rocket"
           },
