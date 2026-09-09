@@ -100,11 +100,11 @@ For a predictable SSH profile from the shell:
 sudo frpctl create enrollment \
   --one-line \
   --ssh \
-  --ssh-user aella \
+  --ssh-user <ssh-user> \
   --label branch-a
 ```
 
-Replace `aella` with an SSH user that **already exists on the remote client**.
+Replace `<ssh-user>` with an SSH user that **already exists on the remote client**.
 
 FRP Auto Deploy does not create OS users, install/configure `sshd`, change passwords, or manage SSH keys.
 
@@ -156,13 +156,13 @@ The client receives a persistent CLIENT ID and the SSH service receives a persis
 ## 7. Connect over SSH
 
 ```bash
-ssh -p <public-port> aella@<FRP-server-public-IP>
+ssh -p <public-port> <ssh-user>@<FRP-server-public-IP>
 ```
 
 With an optional public service hostname:
 
 ```bash
-ssh -p <public-port> aella@fw.example.com
+ssh -p <public-port> <ssh-user>@fw.example.com
 ```
 
 ## Success checklist

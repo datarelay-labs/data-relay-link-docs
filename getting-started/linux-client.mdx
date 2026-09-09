@@ -63,11 +63,11 @@ For an explicit SSH profile:
 sudo frpctl create enrollment \
   --one-line \
   --ssh \
-  --ssh-user aella \
+  --ssh-user <ssh-user> \
   --label branch-a
 ```
 
-Replace `aella` with an SSH account that already exists on the target machine. Run the **exact generated command** on the client; do not reconstruct the bootstrap payload manually.
+Replace `<ssh-user>` with an SSH account that already exists on the target machine. Run the **exact generated command** on the client; do not reconstruct the bootstrap payload manually.
 
 ## Manual Enrollment Code
 
