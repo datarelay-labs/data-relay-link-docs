@@ -99,32 +99,18 @@ sequenceDiagram
 
 One client can publish several services, and a client can also publish services on **other LAN hosts it can reach**.
 
-## Current stable baseline
+## Current stable
 
 | Item | Current |
 | --- | --- |
-| Stable project release | **v2.2.1** |
-| Project version | **2.2.1** |
+| Stable release | **v2.2.1** |
 | Pinned / tested FRP | **v0.71.0** |
-| Release qualification | **Double Full Real E2E PASS / PASS** |
-| Product repository `main` after PR #14 closure | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` |
-| Documentation/repository state | **CANONICAL / CLEAN** — Product Master restored via PR #12; README/CI housekeeping PR #14 merged; release/tag unchanged |
+| Server | **Linux-based** |
 | Default deployment | **Direct** |
 
-### Validated client platforms
+Real E2E client coverage for v2.2.1 includes **Ubuntu 24, Rocky Linux 8.10/9.4, Amazon Linux 2023, macOS Apple Silicon, and Windows 10 / PowerShell 5.1**. Amazon Linux 2 and PowerShell 7 have narrower validation levels.
 
-| Platform | v2.2.1 validation |
-| --- | --- |
-| Ubuntu 24 physical | **Real E2E validated** |
-| Rocky Linux 8.10 | **Real E2E validated** |
-| Rocky Linux 9.4 | **Real E2E validated** |
-| Amazon Linux 2023 | **Real E2E validated** |
-| macOS Apple Silicon | **Real E2E validated** |
-| Windows 10 / PowerShell 5.1 | **Real E2E validated** |
-| Amazon Linux 2 | Container / CI portability only |
-| PowerShell 7 | CI validated; same-host Real E2E only when `pwsh` is installed |
-
-The FRP Auto Deploy **server remains Linux-based**. Client validation and container portability are intentionally reported separately so a lower-level test is never presented as a stronger field claim.
+See [Supported Platforms](/reference/platforms) for the exact validation matrix and [Release Status](/reference/release-status) for release/tag details.
 
 ## Four rules that prevent most mistakes
 

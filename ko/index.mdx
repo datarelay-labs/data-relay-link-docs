@@ -85,32 +85,18 @@ sequenceDiagram
 
 한 클라이언트에 여러 서비스를 등록할 수 있고, 클라이언트가 접근 가능한 **다른 LAN 서버의 서비스**도 게시할 수 있습니다.
 
-## 현재 stable 기준
+## 현재 stable
 
 | 항목 | 현재 |
 | --- | --- |
 | Stable release | **v2.2.1** |
-| Project version | **2.2.1** |
 | Pinned / tested FRP | **v0.71.0** |
-| Release qualification | **Double Full Real E2E PASS / PASS** |
-| PR #14 closure 이후 Product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` |
-| Documentation/repository state | **CANONICAL / CLEAN** — PR #12 Product Master 복구 + PR #14 README/CI housekeeping merge, release/tag 변경 없음 |
+| Server | **Linux 기반** |
 | 기본 배포 | **Direct** |
 
-### 검증된 Client 플랫폼
+v2.2.1의 Real E2E Client 검증에는 **Ubuntu 24, Rocky Linux 8.10/9.4, Amazon Linux 2023, macOS Apple Silicon, Windows 10 / PowerShell 5.1**이 포함됩니다. Amazon Linux 2와 PowerShell 7은 더 좁은 검증 수준을 사용합니다.
 
-| 플랫폼 | v2.2.1 검증 수준 |
-| --- | --- |
-| Ubuntu 24 physical | **Real E2E 검증 완료** |
-| Rocky Linux 8.10 | **Real E2E 검증 완료** |
-| Rocky Linux 9.4 | **Real E2E 검증 완료** |
-| Amazon Linux 2023 | **Real E2E 검증 완료** |
-| macOS Apple Silicon | **Real E2E 검증 완료** |
-| Windows 10 / PowerShell 5.1 | **Real E2E 검증 완료** |
-| Amazon Linux 2 | Container / CI portability만 검증 |
-| PowerShell 7 | CI 검증 완료; 실제 host에 `pwsh`가 있을 때만 same-host Real E2E claim |
-
-FRP Auto Deploy **Server는 Linux 기반**을 유지합니다. Client의 Real E2E와 container portability는 서로 다른 검증 수준이므로 구분해서 표시합니다.
+정확한 검증 matrix는 [지원 플랫폼 & 제한](/ko/reference/platforms), release/tag 세부 정보는 [Release Status](/ko/reference/release-status)를 확인하세요.
 
 ## 가장 많이 헷갈리는 네 가지
 
