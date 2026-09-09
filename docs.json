@@ -97,6 +97,7 @@
             "pages": [
               "security/overview",
               "reference/architecture",
+              "reference/alternatives",
               "reference/platforms",
               "reference/network-ports",
               "reference/release-status",
@@ -169,6 +170,7 @@
             "pages": [
               "ko/reference/platforms",
               "ko/reference/architecture",
+              "ko/reference/alternatives",
               "ko/security/overview",
               "ko/reference/network-ports",
               "ko/reference/release-status",
