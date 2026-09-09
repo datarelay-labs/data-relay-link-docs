@@ -82,6 +82,7 @@ OS family가 검증됐다고 모든 변형 환경까지 자동으로 검증된 �
 
 - TCP service 중심
 - 외부 firewall/NAT/cloud security policy 자동 설정 없음
+- Published stable **v2.2.1**에는 published TCP service에 대한 built-in 서비스별 source-IP allowlist 정책이나 application-style RBAC 계층이 없음; 외부 firewall/ACL과 target service 자체 authentication/authorization을 사용
 - OS account/password/SSH key 자동 관리 없음
 - HTTPS publish는 TLS termination이 아니라 passthrough
 - bootstrap script는 checksum 검증 대상이지만 project 자체 cryptographic signature는 현재 제공하지 않음

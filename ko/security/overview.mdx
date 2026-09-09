@@ -102,6 +102,16 @@ flowchart LR
 
 Server나 Client의 local root가 완전히 침해된 상황은 제품 보호 경계 밖입니다.
 
+## Published stable의 접근제어 경계
+
+현재 published stable은 **v2.2.1**입니다. 이 버전에는 published TCP service에 대해 제품이 직접 적용하는 **서비스별 source-IP allowlist 정책**이나 application-style **RBAC 계층**이 stable 기능으로 포함되어 있지 않습니다.
+
+v2.2.1에서는 외부 firewall/security group, target host ACL, SSH account/key, database ACL, target application의 authentication/authorization처럼 해당 접근 경계를 실제로 소유하는 제어를 사용해야 합니다.
+
+<Note>
+  Product `main` / release-preparation tree에는 이후 Access Control Pack 작업이 포함되어 있지만, 해당 기능이 들어간 release가 실제 tag/publish되기 전까지는 published stable 기능으로 간주하지 않습니다.
+</Note>
+
 ## Fail closed
 
 Unknown identity, invalid signature, CA mismatch, registry inconsistency, ambiguous client selector 같은 상태에서는 추측해서 계속 진행하지 않고 실패하는 것이 원칙입니다.

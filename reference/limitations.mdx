@@ -15,6 +15,7 @@ FRP Auto Deploy is intentionally focused on lightweight remote-access management
 - Amazon Linux 2 is portability/CI-only in the current release qualification; PowerShell 7 is CI-validated unless a real host actually has `pwsh` installed
 - Published-service NAT is designed around keeping the same FRP service port on the public and internal sides
 - External cloud firewalls, security groups, host firewalls, and NAT rules are not configured automatically
+- In published stable **v2.2.1**, there is no built-in per-service source-IP allowlist policy or application-style RBAC layer for published TCP services; use external firewall/ACL controls and the target service's own authentication/authorization
 - SSH accounts, passwords, SSH keys, and `sshd` configuration are not managed automatically
 - HTTPS application publishing is TCP passthrough; the application owns its TLS certificate
 - Some SELinux, ARM64 systemd, and older OpenSSL environments have separate validation classifications
