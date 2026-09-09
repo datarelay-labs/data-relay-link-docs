@@ -119,7 +119,8 @@
               "ko/getting-started/quickstart",
               "ko/getting-started/server-installation",
               "ko/getting-started/linux-client",
-              "ko/getting-started/macos-client"
+              "ko/getting-started/macos-client",
+              "ko/getting-started/windows-client"
             ],
             "icon": "rocket"
           },
