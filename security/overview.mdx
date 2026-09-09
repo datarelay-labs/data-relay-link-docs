@@ -102,6 +102,16 @@ flowchart LR
 
 The product does not claim to protect secrets from a fully compromised root account on the server or client.
 
+## Published stable access-control boundary
+
+The current published stable release is **v2.2.1**. In that release, FRP Auto Deploy does **not** provide a built-in per-service source-IP allowlist policy or an application-style RBAC layer for published TCP services.
+
+For v2.2.1, restrict who can reach a published service with the controls that own that boundary, such as the external firewall/security group, target-host ACLs, SSH keys/accounts, database ACLs, or the target application's own authentication and authorization.
+
+<Note>
+  The product `main` / release-preparation tree contains later Access Control Pack work, but that must not be treated as part of the published stable contract until a release containing it is actually tagged and published.
+</Note>
+
 ## Fail closed
 
 Conditions such as unknown identity, invalid signatures, CA mismatch, corrupted registry state, or ambiguous client selectors should fail rather than silently guess.
