@@ -1,0 +1,82 @@
+---
+title: "Manual Groups"
+sidebarTitle: "Manual Groups"
+description: "Organize a small FRP Auto Deploy fleet into manual groups without changing client identity or service ports."
+---
+
+# Manual Groups
+
+FRP Auto Deploy v2.2.1 includes a **Manual Group MVP** for organizing clients. Groups are administrator metadata: they do not change CLIENT ID, service configuration, public ports, or tunnel behavior.
+
+<Note>
+  v2.2.1 supports **manual groups only**. Dynamic membership rules and large-scale fleet orchestration are outside this stable scope.
+</Note>
+
+## Create a group
+
+```bash
+sudo frpctl create group branch-office --description "Branch office systems"
+```
+
+Each stored group has an immutable group ID such as `grp_1234abcd`. The name and description can be changed later.
+
+## Add a client
+
+Use the client's canonical CLIENT ID when possible:
+
+```bash
+sudo frpctl add client <CLIENT-ID> group branch-office
+```
+
+A client can belong to more than one group.
+
+## View groups and membership
+
+```bash
+sudo frpctl show groups
+sudo frpctl show group branch-office
+sudo frpctl show clients --group branch-office
+sudo frpctl show client <CLIENT-ID> groups
+```
+
+`all` and `ungrouped` are virtual selectors; they are not stored group objects.
+
+## Rename or describe a group
+
+```bash
+sudo frpctl rename group branch-office seoul-office
+sudo frpctl set group seoul-office description "Seoul branch systems"
+```
+
+Changing the group name does not change its immutable group ID.
+
+## Remove membership
+
+```bash
+sudo frpctl remove client <CLIENT-ID> group seoul-office
+```
+
+This only removes the membership relationship. The client remains enrolled and its services and public-port reservations are unchanged.
+
+## Delete a group
+
+```bash
+sudo frpctl delete group seoul-office
+```
+
+Deleting a group removes its membership references but does **not** delete clients, revoke identities, disable services, or release ports.
+
+<Warning>
+  Group deletion is not a client lifecycle action. Use [Lifecycle Semantics](/operations/lifecycle) for revoke/release decisions.
+</Warning>
+
+## Typical uses
+
+Manual groups are useful for a small fleet when you want simple operator categories such as:
+
+- customer or partner
+- branch/site
+- lab vs production-support systems
+- temporary support campaign
+
+For the current project target of roughly 1–50 clients, this keeps client lists easier to navigate without introducing a separate fleet-management platform.

@@ -59,7 +59,8 @@
               "guides/services",
               "guides/ssh",
               "guides/http-https",
-              "guides/custom-tcp-lan"
+              "guides/custom-tcp-lan",
+              "guides/groups"
             ],
             "icon": "network-wired"
           },
@@ -132,7 +133,8 @@
               "ko/guides/services",
               "ko/guides/ssh",
               "ko/guides/http-https",
-              "ko/guides/custom-tcp-lan"
+              "ko/guides/custom-tcp-lan",
+              "ko/guides/groups"
             ],
             "icon": "network-wired"
           },
