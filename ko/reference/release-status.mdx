@@ -7,82 +7,32 @@ icon: "tag"
 
 # 릴리스 상태
 
-FRP Auto Deploy는 **immutable stable release**와 mutable `main` branch를 구분합니다.
+FRP Auto Deploy는 **published stable release**와 변경 가능한 development `main` branch를 구분합니다.
 
-## 현재 기준
+## 현재 Stable
 
 | 항목 | 현재 |
 | --- | --- |
 | Published stable release | **v2.2.1** |
 | Project version | **2.2.1** |
-| Pinned/tested FRP | **v0.71.0** |
+| Pinned / tested FRP | **v0.71.0** |
 | Field install 기준 | immutable `v2.2.1` tag |
 | Release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
-| Qualified candidate | `2140be5b6342c3651c16a458f8ea1bc9b577d992` |
-| Full Real E2E | **동일 exact candidate HEAD에서 PASS / PASS** |
-| 현재 Product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` (PR #14 종료 후) |
+| Release qualification | **동일한 qualified candidate에서 전체 Real E2E 두 번 완료** |
 
-Qualified candidate와 v2.2.1 release tree는 동일했습니다. 이미 공개된 v2.2.0은 historical release로 그대로 유지되며 retag하지 않았습니다.
+Qualified v2.2.1 candidate와 published release tree는 동일했습니다. 이미 공개된 v2.2.0은 immutable historical release로 그대로 유지됩니다.
 
-## Canonical 문서 복구 종료
+## Stable과 development `main`의 차이
 
-Post-release 문서 복구 단계 `CANONICAL_PRODUCT_MASTER_RESTORE_V2_2_1_DOCS_CLOSURE`는 **PASS**로 종료됐습니다.
+<Warning>
+  `main`에는 아직 공개되지 않은 기능, 수정 또는 다음 릴리스 준비 내용이 포함될 수 있습니다. `main`에 version이나 기능이 존재하더라도 해당 tag와 GitHub Release가 실제로 publish되기 전에는 stable 기능으로 보지 않습니다.
+</Warning>
 
-| 항목 | 결과 |
-| --- | --- |
-| Docs closure 이후 최종 repository `main` HEAD | `343f292d91d01c3f263ff5c443f101d185b5527f` |
-| v2.2.1 release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
-| v2.2.1 tag target 변경 | **NO** |
-| v2.2.0 tag 변경 | **NO** |
-| 새 release 생성 | **NO** |
-| Product runtime file 변경 | **NO** |
-| Real E2E 재실행 필요 | **NO** |
-| Canonical Product Master 복구 | **PASS** |
-| Product Master structural check | **PASS** |
-| Current release/platform matrix 업데이트 | **YES** |
-| Release history 보존 | **YES** |
-| Provenance 추가 | **YES** |
-| Known corruption 제거 | **YES** |
-| Public metadata scan | **PASS** |
-| Secret scan | **PASS** |
-| `SHA256SUMS` 업데이트 | **YES** |
-| 최종 문서 상태 | **CANONICAL** |
+Field 설치와 public 문서의 stable claim은 항상 최신 **published release/tag**를 기준으로 합니다. Development channel을 의도적으로 사용하는 경우가 아니라면 immutable stable tag를 mutable `main`으로 바꾸지 마세요.
 
-손상/축약된 2,173-line derivative는 **PR #12**를 통해 Owner-reconstructed full integrated Product Master(약 3,625 lines)로 교체됐습니다. 복구된 authoritative 문서는 `docs/PRODUCT_MASTER.md`이며, 불완전한 surgical PR #13은 superseded 상태로 종료됐습니다.
+특히 기능이 이미 `main`에 merge됐지만 아직 release되지 않은 시점에는 이 구분이 중요합니다.
 
-Product Master 문서-only merge로 product repository `main`은 v2.2.1 release commit에서 `343f292…`까지 전진했지만 immutable v2.2.1 tag와 release payload는 변경하지 않았습니다. 이후 README/CI housekeeping PR #14가 `main`을 `c7fe407…`까지 전진시켰습니다. 그 과정에서도 stable install identity는 계속 \*\*v2.2.1 / `19d4b6f…`\*\*이며 release/tag는 그대로입니다.
-
-## PR #14 CI 및 repository housekeeping 종료
-
-후속 단계 `PR14_CI_AND_REPO_HOUSEKEEPING_CLOSURE`도 **PASS**로 종료됐습니다.
-
-| 항목 | 결과 |
-| --- | --- |
-| 최종 Product repository `main` | `c7fe407d4dab12896469ef29cb7a882ad6311bd0` |
-| PR #14 | **MERGED** |
-| Required checks | **PASS** — lint + 7개 distro job 전체 |
-| macOS workflow | **PASS** — docs/dist parity 수정 후 정상, client-port 제품 regression 아님 |
-| Windows workflow | **PASS** |
-| Product runtime file 변경 | **NO** |
-| Full Real E2E 재실행 | **NO** |
-| 새 release/tag 변경 | **NO** |
-| 오래된 PR #1 / #2 | **Superseded로 CLOSED** |
-| 최종 repository 상태 | **CLEAN** |
-| Owner action / manual E2E | **불필요** |
-
-<Note>
-  이전 `docs/GITHUB_SETUP.md` follow-up은 오래된 경로를 전제로 한 항목이었습니다. 실제 파일은 root `GITHUB_SETUP.md`이고 이미 v2.2.1 기준으로 정상이며 `docs/GITHUB_SETUP.md`는 존재하지 않습니다. 최종 결과는 \*\*`GITHUB_SETUP_STALE_STATE_NOT_APPLICABLE=YES`\*\*입니다.
-</Note>
-
-```mermaid
-flowchart LR
-    M[main] -->|qualification + release| T[immutable v2.2.1 tag]
-    T --> F[Field installation]
-    U[Upstream FRP] -->|별도 검증 후 채택| P[Pinned FRP 0.71.0]
-    P --> T
-```
-
-## 운영 설치는 stable tag 사용
+## 현재 Stable 설치
 
 ```bash
 curl -fsSL \
@@ -90,11 +40,11 @@ curl -fsSL \
   | sudo bash
 ```
 
-일반 field 설치에서는 mutable `main` 대신 immutable stable tag를 사용합니다.
+Stable server에서 생성하는 client enrollment 명령도 같은 stable release 경로를 유지하는 것이 원칙입니다.
 
-## FRP version 정책
+## FRP 버전 정책
 
-FRP Auto Deploy는 upstream 최신 버전을 자동으로 따라가지 않습니다. Project에서 검증된 FRP version을 pinned 상태로 사용합니다.
+FRP Auto Deploy는 upstream 최신 FRP를 자동으로 따라가지 않습니다. Project에서 특정 upstream 버전을 pin하고 검증한 뒤 qualified project release에 포함합니다.
 
 현재 pinned FRP:
 
@@ -102,10 +52,12 @@ FRP Auto Deploy는 upstream 최신 버전을 자동으로 따라가지 않습니
 0.71.0
 ```
 
-`show upstream`은 정보용이며 newest upstream binary를 자동 채택하는 의미가 아닙니다.
+`show upstream`은 정보용이며 더 새로운 upstream binary가 자동으로 지원된다는 의미가 아닙니다.
 
-## 현재 Stable 플랫폼
+## Stable 플랫폼 요약
 
-v2.2.1에서는 **Ubuntu 24 physical, Rocky Linux 8.10, Rocky Linux 9.4, Amazon Linux 2023, macOS Apple Silicon, Windows 10 / PowerShell 5.1**이 Real E2E 검증됐습니다.
+v2.2.1은 **Ubuntu 24 physical, Rocky Linux 8.10, Rocky Linux 9.4, Amazon Linux 2023, macOS Apple Silicon, Windows 10 / PowerShell 5.1**에서 Real E2E 검증됐습니다.
 
-Amazon Linux 2는 **Container/CI portability만**, PowerShell 7은 **CI 검증**으로 구분합니다. 정확한 matrix는 [지원 플랫폼 & 제한](/ko/reference/platforms)을 확인하세요.
+Amazon Linux 2는 **Container/CI portability만**, PowerShell 7은 실제 test host에 `pwsh`가 있는 경우를 제외하면 **CI 검증**으로 구분합니다.
+
+정확한 validation matrix는 [지원 플랫폼 & 제한](/ko/reference/platforms)을 확인하세요.
