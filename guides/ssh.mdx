@@ -1,18 +1,18 @@
 ---
 title: "SSH"
-description: "Publish SSH through FRP Auto Deploy and connect using the assigned public service port."
+description: "Publish SSH through Data Relay Link and connect using the assigned public service port."
 ---
 
 # SSH
 
-SSH is the most common FRP Auto Deploy service.
+SSH is the most common Data Relay Link service.
 
 ## Local SSH on the client
 
 ```mermaid
 flowchart LR
-    U[Operator laptop] -->|ssh -p 6000| S[FRP Server]
-    S -->|FRP tunnel| C[Remote Client]
+    U[Operator laptop] -->|ssh -p 6000| S[Data Relay Link Server]
+    S -->|Data Relay Link tunnel| C[Remote Client]
     C -->|127.0.0.1:22| D[sshd]
 ```
 
@@ -24,7 +24,7 @@ Target port : 22
 SSH user    : existing-user
 ```
 
-The SSH account and `sshd` must already exist. FRP Auto Deploy does not create users, passwords, keys, `authorized_keys`, or `sshd_config`.
+The SSH account and `sshd` must already exist. Data Relay Link does not create users, passwords, keys, `authorized_keys`, or `sshd_config`.
 
 ## Connect
 
@@ -46,8 +46,8 @@ The hostname is an access alias. It does not change CLIENT ID, Service ID, or th
 
 ```mermaid
 flowchart LR
-    U[Operator] -->|public port| S[FRP Server]
-    S --> C[FRP Client]
+    U[Operator] -->|public port| S[Data Relay Link Server]
+    S --> C[Data Relay Link Client]
     C -->|10.10.20.30:22| H[LAN Server]
 ```
 
@@ -59,7 +59,7 @@ Target port : 22
 SSH user    : admin
 ```
 
-The FRP client must already have normal network reachability to `10.10.20.30:22`.
+The Data Relay Link client must already have normal network reachability to `10.10.20.30:22`.
 
 ## Verify each hop
 
@@ -67,7 +67,7 @@ The FRP client must already have normal network reachability to `10.10.20.30:22`
 flowchart TD
     A[SSH fails] --> B{Is sshd listening on target?}
     B -->|No| C[Fix target SSH service]
-    B -->|Yes| D{Can FRP Client reach target:22?}
+    B -->|Yes| D{Can Data Relay Link Client reach target:22?}
     D -->|No| E[Fix LAN routing / firewall / ACL]
     D -->|Yes| F{Does server show service + public port?}
     F -->|No| G[Fix service config / apply]
@@ -85,15 +85,15 @@ ss -lntp | grep ':22'
 On the client:
 
 ```bash
-sudo frpctl show services
-sudo frpctl show info
-sudo frpctl doctor
+sudo drlink show services
+sudo drlink show info
+sudo drlink doctor
 ```
 
 On the server:
 
 ```bash
-sudo frpctl show client <CLIENT-ID> services
+sudo drlink show client <CLIENT-ID> services
 ```
 
 ## Disable vs release

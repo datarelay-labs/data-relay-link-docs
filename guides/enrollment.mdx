@@ -5,9 +5,9 @@ description: "Enroll remote clients with Zero-Touch or a manual Enrollment Code.
 
 # Client Enrollment
 
-Enrollment is the secure **first-time pairing** of a client with the FRP Auto Deploy server. It establishes persistent management identity; it is not the same thing as the published SSH/web connection itself.
+Enrollment is the secure **first-time pairing** of a client with the Data Relay Link server. It establishes persistent management identity; it is not the same thing as the published SSH/web connection itself.
 
-![FRP Auto Deploy client lifecycle from the original field guide](/images/guides/50.png)
+![Data Relay Link client lifecycle from the original field guide](/images/guides/50.png)
 
 The lifecycle view helps separate first-time enrollment from normal service changes, updates, and final client/port retirement.
 
@@ -26,7 +26,7 @@ flowchart TD
     Z --> E[Secure enrollment]
     M --> E
     E --> I[Persistent CLIENT ID + management identity]
-    I --> T[Outbound FRP tunnel]
+    I --> T[Outbound Data Relay Link tunnel]
 ```
 
 ## Zero-Touch
@@ -34,7 +34,7 @@ flowchart TD
 The easiest interactive CLI path is:
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 Then:
@@ -46,7 +46,7 @@ create zero-touch
 For an explicit SSH profile:
 
 ```bash
-sudo frpctl create enrollment \
+sudo drlink create enrollment \
   --one-line \
   --ssh \
   --ssh-user <ssh-user> \
@@ -55,14 +55,14 @@ sudo frpctl create enrollment \
 
 The generated bootstrap command contains a short-lived credential. Send it only through an appropriate private channel.
 
-The SSH user must already exist. FRP Auto Deploy does not create users, enable SSH, change passwords, or install SSH keys.
+The SSH user must already exist. Data Relay Link does not create users, enable SSH, change passwords, or install SSH keys.
 
 ## Manual Enrollment Code
 
 On the server:
 
 ```bash
-sudo frpctl create enrollment
+sudo drlink create enrollment
 ```
 
 The server produces enrollment information including a short-lived Enrollment Code, allocator URL, CA trust/fingerprint material, and a client bootstrap command.
@@ -101,17 +101,17 @@ After that, normal supported operations use the persistent identity rather than 
 Server:
 
 ```bash
-sudo frpctl show enrollments
-sudo frpctl show clients
-sudo frpctl show client <CLIENT-ID>
+sudo drlink show enrollments
+sudo drlink show clients
+sudo drlink show client <CLIENT-ID>
 ```
 
 Client:
 
 ```bash
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl doctor
+sudo drlink show status
+sudo drlink show services
+sudo drlink doctor
 ```
 
 ## Stable v2.2.1 enrollment lifecycle
@@ -119,7 +119,7 @@ sudo frpctl doctor
 Use the non-secret enrollment ID to revoke an active credential:
 
 ```bash
-sudo frpctl revoke enrollment <ID>
+sudo drlink revoke enrollment <ID>
 ```
 
 `show enrollments` never prints the secret itself. Enrollment retention/purge and lifecycle behavior documented by the v2.2.1 CLI are part of the stable release contract; mutable `main` may contain later changes.

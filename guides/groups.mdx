@@ -1,12 +1,12 @@
 ---
 title: "Manual Groups"
 sidebarTitle: "Manual Groups"
-description: "Organize a small FRP Auto Deploy fleet into manual groups without changing client identity or service ports."
+description: "Organize a small Data Relay Link fleet into manual groups without changing client identity or service ports."
 ---
 
 # Manual Groups
 
-FRP Auto Deploy v2.2.1 includes a **Manual Group MVP** for organizing clients. Groups are administrator metadata: they do not change CLIENT ID, service configuration, public ports, or tunnel behavior.
+Data Relay Link v2.2.1 includes a **Manual Group MVP** for organizing clients. Groups are administrator metadata: they do not change CLIENT ID, service configuration, public ports, or tunnel behavior.
 
 <Note>
   v2.2.1 supports **manual groups only**. Dynamic membership rules and large-scale fleet orchestration are outside this stable scope.
@@ -15,7 +15,7 @@ FRP Auto Deploy v2.2.1 includes a **Manual Group MVP** for organizing clients. G
 ## Create a group
 
 ```bash
-sudo frpctl create group branch-office --description "Branch office systems"
+sudo drlink create group branch-office --description "Branch office systems"
 ```
 
 Each stored group has an immutable group ID such as `grp_1234abcd`. The name and description can be changed later.
@@ -25,7 +25,7 @@ Each stored group has an immutable group ID such as `grp_1234abcd`. The name and
 Use the client's canonical CLIENT ID when possible:
 
 ```bash
-sudo frpctl add client <CLIENT-ID> group branch-office
+sudo drlink add client <CLIENT-ID> group branch-office
 ```
 
 A client can belong to more than one group.
@@ -33,10 +33,10 @@ A client can belong to more than one group.
 ## View groups and membership
 
 ```bash
-sudo frpctl show groups
-sudo frpctl show group branch-office
-sudo frpctl show clients --group branch-office
-sudo frpctl show client <CLIENT-ID> groups
+sudo drlink show groups
+sudo drlink show group branch-office
+sudo drlink show clients --group branch-office
+sudo drlink show client <CLIENT-ID> groups
 ```
 
 `all` and `ungrouped` are virtual selectors; they are not stored group objects.
@@ -44,8 +44,8 @@ sudo frpctl show client <CLIENT-ID> groups
 ## Rename or describe a group
 
 ```bash
-sudo frpctl rename group branch-office seoul-office
-sudo frpctl set group seoul-office description "Seoul branch systems"
+sudo drlink rename group branch-office seoul-office
+sudo drlink set group seoul-office description "Seoul branch systems"
 ```
 
 Changing the group name does not change its immutable group ID.
@@ -53,7 +53,7 @@ Changing the group name does not change its immutable group ID.
 ## Remove membership
 
 ```bash
-sudo frpctl remove client <CLIENT-ID> group seoul-office
+sudo drlink remove client <CLIENT-ID> group seoul-office
 ```
 
 This only removes the membership relationship. The client remains enrolled and its services and public-port reservations are unchanged.
@@ -61,7 +61,7 @@ This only removes the membership relationship. The client remains enrolled and i
 ## Delete a group
 
 ```bash
-sudo frpctl delete group seoul-office
+sudo drlink delete group seoul-office
 ```
 
 Deleting a group removes its membership references but does **not** delete clients, revoke identities, disable services, or release ports.

@@ -23,21 +23,21 @@ flowchart LR
 ## Server
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show clients
-sudo frpctl show enrollments
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show clients
+sudo drlink show enrollments
+sudo drlink doctor
 ```
 
 ## Client
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl show info
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink show info
+sudo drlink doctor
 ```
 
 ## Doctor가 확인하는 범주
@@ -46,13 +46,13 @@ sudo frpctl doctor
 - secret file permission
 - PKI / CA trust
 - systemd service state
-- FRP config / transport
+- Data Relay Link config / transport
 - allocator/enrollment reachability
 - registry / client-state consistency
 - topology와 common network failure
 
 <Warning>
-  `frps.toml`, `frpc.toml`, registry, client identity, PKI 파일을 troubleshooting 첫 단계에서 직접 수정하지 마세요.
+  server/client runtime config, registry, client identity, PKI 파일을 troubleshooting 첫 단계에서 직접 수정하지 마세요.
 </Warning>
 
 더 자세한 증상별 흐름은 [문제 해결](/ko/operations/troubleshooting)을 사용하세요.

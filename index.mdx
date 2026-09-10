@@ -1,79 +1,79 @@
 ---
-title: "FRP Auto Deploy"
-description: "Zero-Touch remote access management for systems behind NAT and firewalls"
+title: "Data Relay Link"
+description: "Lightweight secure connectivity for isolated and restricted networks with controlled remote access and agentless outbound egress."
 ---
 
-# FRP Auto Deploy
+# Data Relay Link
 
-**Reach systems behind NAT and firewalls without building a VPN, opening inbound ports on every remote client, or hand-writing FRP configuration.**
+**Relay only the connections you actually need — into private systems for remote access, or out from restricted networks to approved Internet destinations.**
 
-FRP Auto Deploy keeps official `fatedier/frp` as the tunnel engine and adds secure enrollment, persistent identity, service/port management, lifecycle controls, diagnostics, backup/restore, and the `frpctl` operator CLI.
+Data Relay Link is a lightweight secure-connectivity gateway for small environments. It combines two complementary connection models:
+
+- **Secure Remote Access** — publish selected SSH, HTTP, HTTPS, or custom TCP services from systems behind NAT/firewalls without requiring inbound access on every remote client.
+- **Controlled Egress** — allow systems in isolated or restricted networks to reach only approved external destinations through an agentless HTTP/HTTPS proxy policy.
 
 <Note>
-  Designed for **a few systems to a few dozen clients**. It is intentionally not a 100+ endpoint fleet-orchestration platform.
+  The target scale is **a few systems to a few dozen clients**. Data Relay Link is intentionally not a large-fleet orchestration, VPN mesh, SWG, or SASE platform.
 </Note>
 
 ## Understand it in 30 seconds
 
 ```mermaid
 flowchart LR
-    O[Operator / Internet user]
-    S[FRP Auto Deploy server\npublic entry point]
-    C1[Client A\nbehind NAT/firewall]
-    C2[Client B\nbehind NAT/firewall]
-    L1[Local SSH / HTTPS]
-    L2[Reachable LAN SSH / HTTP]
+    U[Operator / Internet user]
+    S[Data Relay Link Server\npublic entry point]
+    C[Remote Client\nbehind NAT/firewall]
+    L[Private services\nSSH / HTTPS / TCP]
+    R[Restricted host]
+    I[Approved Internet destinations]
 
-    C1 -->|outbound FRP tunnel| S
-    C2 -->|outbound FRP tunnel| S
-    O -->|persistent public service port| S
-    S --> C1
-    S --> C2
-    C1 --> L1
-    C2 --> L2
+    C -->|outbound relay control| S
+    U -->|published service port| S
+    S --> C --> L
+
+    R -->|HTTP / HTTPS proxy| S
+    S -->|policy-approved egress| I
 ```
 
-The remote client starts the tunnel **outbound** toward the server. That is why the client normally does not need a public IP, inbound NAT rule, or inbound firewall opening for the published service.
+The core principle is simple:
+
+> **Do not connect entire networks. Relay only the connections that are actually needed.**
 
 ## Choose your path
 
 <CardGroup cols={2}>
+  <Card title="I want remote access" icon="arrow-right-to-bracket" href="/getting-started/quickstart">
+    Install a server, enroll a client, and publish your first SSH service.
+  </Card>
+
+  <Card title="I need controlled outbound access" icon="arrow-up-right-from-square" href="/reference/architecture">
+    Understand the Controlled Egress model, policy boundaries, and current qualification status.
+  </Card>
+
   <Card title="I am completely new" icon="circle-question" href="/getting-started/concepts">
-    Learn Server, Client, CLIENT ID, Service, public port, and the three network paths visually.
+    Learn Server, Client, CLIENT ID, Service, public ports, and relay traffic flow visually.
   </Card>
 
-  <Card title="I do not have a public IP or spare server" icon="cloud" href="/getting-started/oci-free-tier-server">
-    Prepare an OCI Always Free-eligible Ubuntu VM with a persistent Reserved Public IPv4 address using step-by-step Console screenshots.
+  <Card title="I need a public server" icon="cloud" href="/getting-started/oci-free-tier-server">
+    Prepare an OCI Always Free-eligible Ubuntu VM with a persistent Reserved Public IPv4 address.
   </Card>
 
-  <Card title="I want a working SSH connection" icon="rocket" href="/getting-started/quickstart">
-    Follow the shortest end-to-end path from empty server to remote SSH.
-  </Card>
-
-  <Card title="I am deploying infrastructure" icon="server" href="/getting-started/server-installation">
-    Choose Direct vs single-443, understand required ports, and handle firewall/NAT correctly.
-  </Card>
-
-  <Card title="I am onboarding a client" icon="laptop" href="/getting-started/linux-client">
-    Choose Zero-Touch or manual Enrollment Code and verify the client.
-  </Card>
-
-  <Card title="I need to publish an application" icon="network-wired" href="/guides/services">
+  <Card title="I need to publish applications" icon="network-wired" href="/guides/services">
     Publish SSH, HTTP, HTTPS passthrough, custom TCP, or another reachable LAN target.
   </Card>
 
-  <Card title="I want expert internals" icon="sitemap" href="/reference/architecture">
-    See control plane vs data plane, identity, trust establishment, persistent state, and failure boundaries.
+  <Card title="I want operator commands" icon="terminal" href="/drlink/overview">
+    Use the `drlink` CLI for enrollment, services, lifecycle, diagnostics, backup, and updates.
   </Card>
 </CardGroup>
 
-## What happens from enrollment to connection
+## Secure Remote Access
 
 ```mermaid
 sequenceDiagram
     participant A as Server admin
-    participant S as FRP Auto Deploy server
-    participant C as Remote client
+    participant S as Data Relay Link Server
+    participant C as Remote Client
     participant U as Remote user
     participant T as Target service
 
@@ -82,56 +82,71 @@ sequenceDiagram
     A-->>C: Send command privately
     C->>S: HTTPS enrollment / trust establishment
     S-->>C: Persistent identity + service config
-    C->>S: Outbound FRP control tunnel
+    C->>S: Outbound relay-control session
     U->>S: Connect to assigned public service port
-    S->>C: Forward through FRP tunnel
+    S->>C: Relay service traffic
     C->>T: Connect to target host:port
 ```
 
-## What you can publish
+A remote client normally needs **outbound** connectivity to the Data Relay Link Server, not a public IP or inbound NAT rule of its own.
 
-| Service | Typical target | User connects to |
-| --- | --- | --- |
-| SSH | `127.0.0.1:22` | `ssh -p <public-port> user@server` |
-| HTTP | `127.0.0.1:80` or LAN host | `http://server:<public-port>` |
-| HTTPS | `127.0.0.1:443` or LAN host | `https://server:<public-port>` |
-| Custom TCP | `host:any-tcp-port` | application-specific client |
+## Controlled Egress
 
-One client can publish several services, and a client can also publish services on **other LAN hosts it can reach**.
+Controlled Egress is designed for hosts that cannot access the Internet directly but need tightly limited outbound connectivity.
 
-## Current stable
+```text
+HTTP_PROXY=http://data-relay-link.example:6080
+HTTPS_PROXY=http://data-relay-link.example:6080
+```
+
+The server-side policy can restrict:
+
+- source CIDR/network
+- destination FQDN
+- destination port
+- controlled wildcard subdomains
+- IP-literal use
+
+The design is **default deny / fail closed**, with server-side DNS resolution, SSRF protection, DNS-rebinding resistance, audit logging, diagnostics, and backup/restore integration.
+
+<Warning>
+  Controlled Egress is currently under release qualification. Secure Remote Access v2.2.1 is the published stable baseline; do not assume Controlled Egress is part of the immutable v2.2.1 release until its Real E2E qualification is complete.
+</Warning>
+
+## Current stable baseline
 
 | Item | Current |
 | --- | --- |
-| Stable release | **v2.2.1** |
-| Pinned / tested FRP | **v0.71.0** |
+| Stable product release | **v2.2.1** |
+| Bundled / tested relay engine | **v0.71.0** |
 | Server | **Linux-based** |
-| Default deployment | **Direct** |
+| Default remote-access deployment | **Direct** |
+| Operator CLI | **`drlink`** |
 
 Real E2E client coverage for v2.2.1 includes **Ubuntu 24, Rocky Linux 8.10/9.4, Amazon Linux 2023, macOS Apple Silicon, and Windows 10 / PowerShell 5.1**. Amazon Linux 2 and PowerShell 7 have narrower validation levels.
 
-See [Supported Platforms](/reference/platforms) for the exact validation matrix and [Release Status](/reference/release-status) for release/tag details.
+See [Supported Platforms](/reference/platforms) for the validation matrix and [Release Status](/reference/release-status) for release details.
 
-## Four rules that prevent most mistakes
+## Boundaries that matter
 
 <AccordionGroup>
-  <Accordion title="The client usually needs outbound access, not inbound port forwarding">
-    The remote client initiates enrollment and the FRP control tunnel toward the public server. The public server/firewall still needs the required inbound ports.
+  <Accordion title="Data Relay Link does not configure your cloud firewall, NAT, or DNS provider">
+    AWS Security Groups, OCI Security Lists, external NAT/DNAT, host firewall policy, and DNS records remain infrastructure responsibilities.
   </Accordion>
 
-  <Accordion title="FRP Auto Deploy does not configure your firewall or DNS provider">
-    AWS Security Groups, OCI Security Lists, external NAT, UFW/firewalld/iptables, and DNS records remain infrastructure responsibilities.
+  <Accordion title="Published HTTPS is TCP passthrough">
+    The target application, not Data Relay Link, presents the application TLS certificate.
   </Accordion>
 
-  <Accordion title="HTTPS publishing is TCP passthrough">
-    FRP Auto Deploy does not terminate the published application's TLS. The target application must present a certificate valid for the hostname users actually enter.
+  <Accordion title="Controlled Egress is not TLS inspection">
+    The v1 egress design allows HTTP forwarding and HTTPS CONNECT. It does not decrypt TLS, perform DLP, malware inspection, CASB, browser isolation, or full SWG/SASE functions.
   </Accordion>
 
-  <Accordion title="Disable, revoke, and release are intentionally different">
+  <Accordion title="Disable, revoke, and release are different lifecycle actions">
     Disable stops publication but keeps the port. Revoke blocks management identity. Release returns a public-port reservation.
   </Accordion>
 </AccordionGroup>
 
 <Tip>
-  New user: read [Concepts & Mental Model](/getting-started/concepts), then [Quick Start](/getting-started/quickstart). Experienced operator: jump to [frpctl](/frpctl/overview), [Architecture](/reference/architecture), or [Troubleshooting](/troubleshooting/overview).
+  New user: start with [Concepts & Mental Model](/getting-started/concepts) and [Quick Start](/getting-started/quickstart). Operators can jump to the [drlink Guide](/drlink/overview), [Architecture](/reference/architecture), or [Troubleshooting](/troubleshooting/overview).
 </Tip>

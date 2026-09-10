@@ -1,13 +1,17 @@
 ---
-title: "FRP Auto Deploy"
-description: "NAT와 방화벽 뒤 시스템을 위한 Zero-Touch 원격 접속 관리"
+title: "Data Relay Link"
+description: "폐쇄망과 제한망에서 필요한 연결만 안전하게 중계하는 경량 연결 게이트웨이"
 ---
 
-# FRP Auto Deploy
+# Data Relay Link
 
-**VPN 구축, 원격 클라이언트의 인바운드 방화벽 개방, 수동 FRP 설정 없이 NAT/방화벽 뒤 시스템에 원격 접속합니다.**
+**폐쇄망과 제한망에서 네트워크 전체를 열지 않고, 실제로 필요한 연결만 안전하게 중계합니다.**
 
-FRP Auto Deploy는 공식 `fatedier/frp`를 터널 엔진으로 그대로 사용하고, 그 위에 안전한 등록, 영구 CLIENT ID, 서비스/포트 관리, lifecycle, 진단, 백업/복구와 `frpctl` 운영 CLI를 추가합니다.
+Data Relay Link는 하나의 경량 운영 모델로 **Secure Remote Access**와 **Controlled Egress**를 제공하는 연결 게이트웨이입니다. 원격 접속에서는 NAT/방화벽 뒤의 필요한 서비스만 외부에 게시하고, Controlled Egress에서는 승인된 외부 목적지만 허용하는 방향으로 설계됩니다. 등록, 영구 CLIENT ID, 서비스/포트 관리, lifecycle, 진단, 백업/복구는 `drlink` CLI에서 관리합니다.
+
+<Note>
+  Secure Remote Access는 현재 stable 기능입니다. Controlled Egress는 현재 개발 및 Real E2E 검증 단계이므로 stable 지원으로 표시하지 않습니다.
+</Note>
 
 <Note>
   목표 규모는 **몇 대에서 몇십 대 정도**입니다. 수백 대 이상의 fleet orchestration 제품으로 만들려는 프로젝트가 아닙니다.
@@ -18,14 +22,14 @@ FRP Auto Deploy는 공식 `fatedier/frp`를 터널 엔진으로 그대로 사용
 ```mermaid
 flowchart LR
     O[관리자 / 인터넷 사용자]
-    S[FRP Auto Deploy 서버\n공인 진입점]
+    S[Data Relay Link 서버\n공인 진입점]
     C1[Client A\nNAT/방화벽 뒤]
     C2[Client B\nNAT/방화벽 뒤]
     L1[로컬 SSH / HTTPS]
     L2[내부 LAN SSH / HTTP]
 
-    C1 -->|아웃바운드 FRP 터널| S
-    C2 -->|아웃바운드 FRP 터널| S
+    C1 -->|아웃바운드 Data Relay Link 터널| S
+    C2 -->|아웃바운드 Data Relay Link 터널| S
     O -->|영구 공개 서비스 포트| S
     S --> C1
     S --> C2
@@ -38,7 +42,7 @@ flowchart LR
 ## 내 상황에 맞게 시작하세요
 
 <CardGroup cols={2}>
-  <Card title="FRP/NAT를 잘 모릅니다" icon="circle-question" href="/ko/getting-started/concepts">Server, Client, CLIENT ID, Service, 공개 포트를 그림으로 먼저 이해합니다.</Card>
+  <Card title="NAT/터널 구조를 잘 모릅니다" icon="circle-question" href="/ko/getting-started/concepts">Server, Client, CLIENT ID, Service, 공개 포트를 그림으로 먼저 이해합니다.</Card>
   <Card title="고정 공인 IP나 무료 서버가 없습니다" icon="cloud" href="/ko/getting-started/oci-free-tier-server">
     실제 OCI Console 화면을 보면서 Always Free 대상 Ubuntu VM과 Reserved Public IPv4를 단계별로 준비합니다.
   </Card>
@@ -58,7 +62,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant A as 서버 관리자
-    participant S as FRP Auto Deploy 서버
+    participant S as Data Relay Link 서버
     participant C as 원격 클라이언트
     participant U as 원격 사용자
     participant T as Target 서비스
@@ -68,9 +72,9 @@ sequenceDiagram
     A-->>C: 비공개 채널로 전달
     C->>S: HTTPS enrollment / trust 수립
     S-->>C: Persistent identity + 서비스 설정
-    C->>S: Outbound FRP control tunnel
+    C->>S: Outbound Data Relay Link control tunnel
     U->>S: 배정된 공개 서비스 포트로 접속
-    S->>C: FRP tunnel로 전달
+    S->>C: Data Relay Link tunnel로 전달
     C->>T: target host:port 접속
 ```
 
@@ -90,7 +94,7 @@ sequenceDiagram
 | 항목 | 현재 |
 | --- | --- |
 | Stable release | **v2.2.1** |
-| Pinned / tested FRP | **v0.71.0** |
+| Bundled relay engine | **v0.71.0** |
 | Server | **Linux 기반** |
 | 기본 배포 | **Direct** |
 
@@ -102,10 +106,10 @@ v2.2.1의 Real E2E Client 검증에는 **Ubuntu 24, Rocky Linux 8.10/9.4, Amazon
 
 <AccordionGroup>
   <Accordion title="클라이언트는 보통 인바운드 포트를 열지 않습니다">
-    클라이언트가 enrollment와 FRP control tunnel을 서버 쪽으로 아웃바운드로 시작합니다. 대신 FRP 서버/공인 방화벽은 필요한 public endpoint를 받아야 합니다.
+    클라이언트가 enrollment와 Data Relay Link control tunnel을 서버 쪽으로 아웃바운드로 시작합니다. 대신 Data Relay Link 서버/공인 방화벽은 필요한 public endpoint를 받아야 합니다.
   </Accordion>
 
-  <Accordion title="FRP Auto Deploy가 방화벽/NAT/DNS를 자동 설정하지는 않습니다">
+  <Accordion title="Data Relay Link가 방화벽/NAT/DNS를 자동 설정하지는 않습니다">
     AWS/OCI 보안 정책, 외부 DNAT, UFW/firewalld/iptables, DNS provider record는 인프라 담당 영역입니다.
   </Accordion>
 

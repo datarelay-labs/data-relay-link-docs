@@ -1,6 +1,6 @@
 ---
 title: "Glossary"
-description: "Plain-language definitions of FRP Auto Deploy terms for beginners and operators."
+description: "Plain-language definitions of Data Relay Link terms for beginners and operators."
 sidebarTitle: "Glossary"
 icon: "book-open"
 ---
@@ -11,32 +11,37 @@ Use this page when a guide uses a term you do not recognize.
 
 | Term | Meaning |
 | --- | --- |
-| **FRP** | The official `fatedier/frp` reverse-proxy/tunnel engine used by this project. |
-| **FRP Auto Deploy server** | The Linux public entry point running `frps` plus the enrollment/management layer. |
-| **Client** | A remote machine running `frpc` and the FRP Auto Deploy client state/management identity. |
+| **Data Relay Link** | Lightweight secure-connectivity product for selected remote access and controlled outbound connectivity. |
+| **Data Relay Link Server** | Linux public entry point running the relay runtime plus enrollment, management, policy, audit, and lifecycle components. |
+| **Client** | Remote machine running the Data Relay Link client runtime and persistent management identity. |
+| **Relay engine** | Bundled low-level transport runtime used to carry remote-access relay sessions. |
+| **Relay token** | Credential used to authenticate relay transport; separate from enrollment and management credentials. |
 | **CLIENT ID** | Immutable machine identity used by the server for canonical administration. |
 | **Label** | Human-friendly client name. It can change without changing CLIENT ID. |
-| **Hostname** | The operating-system hostname reported/displayed for a client; not canonical identity. |
+| **Hostname** | Operating-system hostname reported/displayed for a client; not canonical identity. |
 | **Tag** | Administrator metadata used to classify a client. |
 | **Service** | One published TCP target, such as SSH or a web application. |
 | **Service ID** | Stable identifier for a service on a client, such as `ssh` or `web-admin`. |
-| **Target host / port** | Where the FRP client forwards the connection, for example `127.0.0.1:22` or `10.10.20.30:443`. |
-| **Public service port** | Internet-facing TCP port assigned to a service on the FRP server. It is treated as a persistent reservation. |
+| **Target host / port** | Where the client forwards a published connection, for example `127.0.0.1:22` or `10.10.20.30:443`. |
+| **Public service port** | Internet-facing TCP port assigned to a service on the Data Relay Link Server. It is treated as a persistent reservation. |
 | **Enrollment** | Secure first-time pairing of a client with the server. |
 | **Enrollment Code** | Short-lived secret used during manual enrollment. |
 | **Bootstrap Ticket** | Short-lived secret used by Zero-Touch enrollment. |
 | **Zero-Touch** | Onboarding method where the server prepares the profile and the remote user runs one generated command. |
 | **Allocator** | Server-side enrollment/management HTTPS component that coordinates enrollment and service-port assignment. |
-| **Project private CA** | CA maintained by FRP Auto Deploy to establish/verify management HTTPS trust. |
-| **FRP token** | Credential used to authenticate the FRP tunnel; separate from enrollment/management credentials. |
-| **Direct mode** | Default server mode with FRP control and enrollment HTTPS exposed on separate public endpoints. |
-| **single-443** | Enterprise mode that carries enrollment HTTPS and FRP control/WSS through public TCP/443. |
+| **Project private CA** | CA maintained by Data Relay Link to establish and verify management HTTPS trust. |
+| **Direct mode** | Default server mode with relay control and enrollment HTTPS exposed on separate public endpoints. |
+| **single-443** | Deployment mode that carries enrollment HTTPS and relay control/WSS through public TCP/443. |
 | **Public hostname** | Optional DNS alias for user-facing published-service access. |
+| **Controlled Egress** | Agentless HTTP/HTTPS outbound relay that allows only server-policy-approved destinations. |
+| **Egress policy** | Source network, destination FQDN, destination port, wildcard, and deny rules applied to Controlled Egress. |
+| **Default deny** | Policy behavior where traffic is rejected unless an explicit allow rule matches. |
+| **Fail closed** | Safety behavior where policy/configuration/authentication failure results in denial rather than broad access. |
 | **Disable** | Stop a service temporarily while keeping its public-port reservation. |
 | **Release** | Return a public service-port reservation to the pool. |
 | **Revoke** | Block a management identity or active enrollment credential; does not mean release. |
-| **Doctor** | Read-only `frpctl` diagnostics that checks installation, trust, state, services, and network consistency. |
+| **Doctor** | Read-only `drlink` diagnostics that checks installation, trust, state, services, policy, and network consistency. |
 
 <Note>
-  The three most important distinctions are **CLIENT ID vs label/hostname**, **disable vs release**, and **FRP token vs enrollment/management credentials**.
+  Important distinctions: **CLIENT ID vs label/hostname**, **disable vs release**, and **relay token vs enrollment/management credentials**.
 </Note>

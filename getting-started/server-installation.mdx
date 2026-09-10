@@ -1,11 +1,11 @@
 ---
 title: "Server Installation"
-description: "Install and verify the FRP Auto Deploy server using the current stable release."
+description: "Install and verify the Data Relay Link server using the current stable release."
 ---
 
 # Server Installation
 
-The FRP Auto Deploy server is the public entry point. It runs official `frps` plus enrollment, registry, lifecycle, and `frpctl` management components.
+The Data Relay Link server is the public entry point. It runs the bundled relay-server runtime plus enrollment, registry, lifecycle, and `drlink` management components.
 
 ## Recommended first environment
 
@@ -21,7 +21,7 @@ Other Linux families have different validation levels; see [Supported Platforms]
 
 The original field guide summarized the three common network layouts in one diagram. Use it as a visual map before choosing the actual product mode.
 
-![FRP Auto Deploy deployment layouts: Direct, NAT, and Enterprise single-443](/images/guides/51.png)
+![Data Relay Link deployment layouts: Direct, NAT, and Enterprise single-443](/images/guides/51.png)
 
 <Note>
   The diagram shows **Direct**, **Direct behind NAT**, and **Enterprise single-443** as network layouts. NAT itself is not a third product mode; the product modes are Direct and Enterprise single-443.
@@ -39,7 +39,7 @@ flowchart TD
 ```
 
 <Note>
-  NAT is a network topology, not a third FRP Auto Deploy mode. The two product modes are **Direct** and **Enterprise single-443**.
+  NAT is a network topology, not a third Data Relay Link mode. The two product modes are **Direct** and **Enterprise single-443**.
 </Note>
 
 ## Direct mode defaults
@@ -47,13 +47,13 @@ flowchart TD
 ```mermaid
 flowchart LR
     I[Internet]
-    S[FRP Auto Deploy server]
-    I -->|TCP 443\nFRP control| S
+    S[Data Relay Link server]
+    I -->|TCP 443\nData Relay Link control| S
     I -->|TCP 6099\nEnrollment / management HTTPS| S
     I -->|TCP 6000-6098\nPublished services| S
 ```
 
-TCP/22 is optional for your own administrative SSH access to the server; it is not part of the FRP Auto Deploy tunnel path.
+TCP/22 is optional for your own administrative SSH access to the server; it is not part of the Data Relay Link tunnel path.
 
 ## If the server is behind NAT
 
@@ -63,7 +63,7 @@ Example:
 flowchart LR
     I[Internet\n203.0.113.10]
     F[Firewall / NAT]
-    S[FRP server\n192.0.2.50]
+    S[Data Relay Link server\n192.0.2.50]
 
     I -->|8443| F -->|443| S
     I -->|9443| F -->|6099| S
@@ -74,7 +74,7 @@ Clients must use the **public** control/enrollment endpoints, not the server's p
 
 ## Install the current stable release
 
-Current published stable: **v2.2.1** with pinned FRP **v0.71.0**.
+Current published stable: **v2.2.1** with bundled/tested relay engine **v0.71.0**.
 
 ```bash
 curl -fsSL \
@@ -103,9 +103,9 @@ Expect questions about:
 ## Verify immediately after installation
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink doctor
 ```
 
 `doctor` is read-only and checks installation state, permissions, PKI, service state, registry consistency, topology, and common network problems.
@@ -124,7 +124,7 @@ These files/state protect trust, identity, and public-port reservations. Do not 
 ## Server readiness checklist
 
 - required systemd services are active
-- `frpctl doctor` has no blocking finding
+- `drlink doctor` has no blocking finding
 - public control/enrollment endpoints are reachable from the client network
 - published service range is allowed by the server-side firewall/NAT
 - if using DNS, the public hostname resolves to the correct public entry point

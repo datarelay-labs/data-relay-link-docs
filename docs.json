@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "FRP Auto Deploy",
-  "description": "Lightweight Zero-Touch remote access management for systems behind NAT and firewalls.",
+  "name": "Data Relay Link",
+  "description": "Lightweight secure connectivity for isolated and restricted networks with controlled remote access and agentless outbound egress.",
   "colors": {
     "primary": "#16A34A"
   },
@@ -20,7 +20,7 @@
     }
   },
   "search": {
-    "prompt": "Search FRP Auto Deploy docs..."
+    "prompt": "Search Data Relay Link docs..."
   },
   "seo": {
     "indexing": "navigable",
@@ -65,10 +65,10 @@
             "icon": "network-wired"
           },
           {
-            "group": "frpctl",
+            "group": "drlink",
             "pages": [
-              "frpctl/overview",
-              "frpctl/cli-reference"
+              "drlink/overview",
+              "drlink/cli-reference"
             ],
             "icon": "terminal"
           },
@@ -140,10 +140,10 @@
             "icon": "network-wired"
           },
           {
-            "group": "frpctl",
+            "group": "drlink",
             "pages": [
-              "ko/frpctl/overview",
-              "ko/frpctl/cli-reference"
+              "ko/drlink/overview",
+              "ko/drlink/cli-reference"
             ],
             "icon": "terminal"
           },

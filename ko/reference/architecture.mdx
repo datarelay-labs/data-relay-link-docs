@@ -15,29 +15,29 @@ icon: "sitemap"
 flowchart LR
     U[관리자 / 인터넷 사용자]
     F[외부 Firewall / NAT\n선택]
-    S[FRP Auto Deploy 서버]
-    C1[Client A\nfrpc + management identity]
-    C2[Client B\nfrpc + management identity]
+    S[Data Relay Link 서버]
+    C1[Client A\nData Relay Link Client runtime + management identity]
+    C2[Client B\nData Relay Link Client runtime + management identity]
     L1[로컬 서비스\n127.0.0.1:*]
     L2[접근 가능한 LAN 서비스\n10.x / 172.16-31.x / 192.168.x]
 
     U -->|published TCP port| F
     F --> S
-    C1 -->|outbound FRP control| S
-    C2 -->|outbound FRP control| S
+    C1 -->|outbound Data Relay Link control| S
+    C2 -->|outbound Data Relay Link control| S
     C1 --> L1
     C1 --> L2
 ```
 
-FRP Auto Deploy는 공식 FRP를 대체하는 터널 엔진이 아니라 그 위의 **lightweight management layer**입니다.
+Data Relay Link는 Secure Remote Access용 **bundled relay engine**과 enrollment, identity, service lifecycle, policy, audit를 하나의 제품으로 관리합니다. 내부 transport runtime은 사용자-facing 제품 identity와 분리합니다.
 
 ## Control plane과 data plane
 
 | 영역 | 역할 | 일반 전송 방식 |
 | --- | --- | --- |
 | Enrollment / management | 최초 신뢰, identity, 서비스 metadata, 관리 작업 | 검증된 HTTPS |
-| FRP control | proxy 등록과 reverse tunnel 유지 | FRP native TLS 또는 WSS |
-| Published service data | SSH/HTTP/HTTPS/Custom TCP 실제 트래픽 | FRP proxy를 통한 TCP |
+| Relay control | proxy 등록과 reverse tunnel 유지 | bundled relay transport의 TLS 또는 WSS |
+| Published service data | SSH/HTTP/HTTPS/Custom TCP 실제 트래픽 | relay tunnel을 통한 TCP |
 
 각 영역은 서로 다른 자격 증명과 역할을 가집니다.
 
@@ -47,9 +47,9 @@ FRP Auto Deploy는 공식 FRP를 대체하는 터널 엔진이 아니라 그 위
 flowchart TB
     I[Internet]
     A[Enrollment / management HTTPS\nTCP 6099]
-    C[FRP control\nTCP 443]
+    C[Data Relay Link control\nTCP 443]
     P[Published services\nTCP 6000-6098]
-    S[FRP Auto Deploy 서버]
+    S[Data Relay Link 서버]
 
     I --> A --> S
     I --> C --> S
@@ -63,12 +63,12 @@ flowchart TB
     I[Internet]
     FE[Public frontend\nTCP 443]
     A[Allocator backend\n127.0.0.1:6099]
-    F[FRP backend\n127.0.0.1:7000]
+    F[Data Relay Link backend\n127.0.0.1:7000]
     P[Published services\nTCP 6000-6098]
 
     I --> FE
     FE -->|HTTPS enrollment| A
-    FE -->|FRP control over WSS| F
+    FE -->|Data Relay Link control over WSS| F
     I --> P
 ```
 
@@ -105,15 +105,15 @@ sequenceDiagram
     C->>S: 이후 signed management request
 ```
 
-FRP token은 FRP tunnel 인증용이며 Enrollment Code, Bootstrap Ticket, management identity와 같은 자격 증명이 아닙니다.
+Relay transport token은 Secure Remote Access tunnel 인증용이며 Enrollment Code, Bootstrap Ticket, management identity와 같은 자격 증명이 아닙니다.
 
 ## 보존되는 서버 상태
 
 ```text
-/etc/frp-auto-deploy/config.json
-/etc/frp-auto-deploy/pki/
-/etc/frp/server_token
-/var/lib/frp-auto-deploy/registry.json
+/etc/data-relay-link/config.json
+/etc/data-relay-link/pki/
+/etc/data-relay-link/server_token
+/var/lib/data-relay-link/registry.json
 ```
 
 정상적인 업데이트, 재부팅, 지원되는 restore에서는 identity, CA trust, token, registry, public-port reservation을 보존하는 것이 설계 목표입니다.

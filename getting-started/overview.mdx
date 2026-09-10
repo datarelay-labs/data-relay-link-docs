@@ -1,19 +1,26 @@
 ---
-title: "What is FRP Auto Deploy?"
-description: "Understand the problem FRP Auto Deploy solves and the operating model."
+title: "What is Data Relay Link?"
+description: "Understand the problem Data Relay Link solves and its operating model."
 ---
 
-# What is FRP Auto Deploy?
+# What is Data Relay Link?
 
-FRP Auto Deploy is a **lightweight deployment and operations layer for official FRP**. It is built for small remote-access environments where a few systems to a few dozen systems need to be reached safely from outside private networks.
+Data Relay Link is a **lightweight secure-connectivity gateway for small isolated, restricted, and NAT/firewall-protected environments**. It is designed around a simple rule:
+
+> **Do not connect entire networks. Relay only the connections that are actually needed.**
+
+It has two product pillars:
+
+1. **Secure Remote Access** — outside → inside. Publish only selected services from systems behind NAT/firewalls.
+2. **Controlled Egress** — inside → Internet. Allow restricted hosts to reach only policy-approved external destinations.
 
 <Note>
-  **FRP** is the tunnel engine. **FRP Auto Deploy** is the installation, enrollment, identity, service, port, lifecycle, backup, diagnostics, and operator experience around it.
+  The intended scale is a few systems to a few dozen clients. The product is intentionally not a large-fleet orchestration platform, full VPN mesh, SWG, or SASE stack.
 </Note>
 
-## The problem it solves
+## The problems it solves
 
-Without a reverse-tunnel approach, remote support often becomes a chain of infrastructure requests:
+Remote support often becomes a chain of infrastructure requests:
 
 ```mermaid
 flowchart LR
@@ -23,92 +30,106 @@ flowchart LR
     B --> H[Reach private server]
 ```
 
-For temporary support, labs, partners, branches, and small infrastructure, that process can be much heavier than the actual technical task.
+Restricted networks have the opposite problem: an internal server may need package updates, source repositories, APIs, or vendor services, but administrators do not want to grant broad Internet access.
 
-## The operating model
+```mermaid
+flowchart LR
+    R[Restricted host] --> X[No direct Internet]
+    X --> P[Need only approved destinations]
+```
 
-Install the public server once. Remote clients enroll and initiate outbound tunnels toward it.
+Data Relay Link addresses both cases without turning the environment into one flat connected network.
+
+## Secure Remote Access model
+
+Install a public Data Relay Link Server once. Remote clients enroll and initiate outbound relay-control sessions toward it.
 
 ```mermaid
 flowchart LR
     O[Operator]
-    S[FRP Auto Deploy server\npublic entry point]
-    C[Remote client\nbehind NAT/firewall]
+    S[Data Relay Link Server\npublic entry point]
+    C[Remote Client\nbehind NAT/firewall]
     LOCAL[Local services\n127.0.0.1:*]
     LAN[Other LAN hosts\n10.x / 172.16-31.x / 192.168.x]
 
-    C -->|outbound FRP control| S
-    O -->|public service port| S
+    C -->|outbound relay control| S
+    O -->|published service port| S
     S -->|service traffic| C
     C --> LOCAL
     C --> LAN
 ```
 
-A client can publish its own services or act as a small gateway for services on other LAN hosts that it can reach.
+A client can publish its own services or selected services on other LAN hosts that it can reach.
+
+## Controlled Egress model
+
+A restricted host uses the Data Relay Link Server as an HTTP/HTTPS forward proxy. The host itself does not require a Data Relay Link agent for this v1 model.
+
+```mermaid
+flowchart LR
+    R[Restricted host] -->|HTTP_PROXY / HTTPS_PROXY| S[Data Relay Link Server]
+    S --> P{Policy}
+    P -->|allow| A[Approved FQDN:port]
+    P -->|deny| D[Everything else]
+```
+
+The policy model includes source CIDR, FQDN, destination port, controlled wildcard rules, default deny, fail-closed behavior, and protections against unsafe destinations.
+
+<Warning>
+  Controlled Egress is currently under release qualification. The published stable v2.2.1 baseline is Secure Remote Access; do not treat Controlled Egress as part of immutable v2.2.1 until its Real E2E qualification is complete.
+</Warning>
 
 ## Who is it for?
 
 <CardGroup cols={2}>
   <Card title="System administrators" icon="server">
-    Reach remote Linux systems without building a full VPN or RMM stack.
+    Reach remote Linux, Windows, or macOS systems without building a full VPN/RMM stack.
   </Card>
 
   <Card title="Technical support engineers" icon="headset">
-    Give customers or partners a controlled one-command onboarding path.
+    Give customers or partners a controlled one-command onboarding path for remote support.
   </Card>
 
-  <Card title="Lab / partner operators" icon="flask">
-    Publish a few services from private networks through one controlled public entry point.
+  <Card title="Restricted-network operators" icon="shield-halved">
+    Permit only approved outbound HTTP/HTTPS destinations instead of granting broad Internet access.
   </Card>
 
   <Card title="Small infrastructure teams" icon="network-wired">
-    Manage a few to a few dozen systems with stable identities, ports, and a CLI.
+    Operate a few to a few dozen systems with persistent identity, service ports, policy, diagnostics, and a CLI.
   </Card>
 </CardGroup>
 
-## What the product manages
+## What Data Relay Link manages
 
 ```mermaid
 flowchart TB
-    FRP[Official FRP\nTunnel engine]
-    AD[FRP Auto Deploy]
-    AD --> I[Install / update]
-    AD --> E[Enrollment / trust]
-    AD --> ID[CLIENT ID / metadata]
-    AD --> SV[Service definitions]
-    AD --> PP[Persistent public ports]
-    AD --> CLI[frpctl operations]
-    AD --> DR[Backup / restore / doctor]
-    FRP --> AD
+    D[Data Relay Link]
+    D --> I[Install / update]
+    D --> E[Enrollment / trust]
+    D --> ID[CLIENT ID / metadata]
+    D --> SV[Service definitions]
+    D --> PP[Persistent public ports]
+    D --> EG[Controlled Egress policy]
+    D --> CLI[drlink operations]
+    D --> DR[Audit / backup / restore / doctor]
+    D --> RE[Bundled relay engine]
 ```
 
 ## What it intentionally does not manage
 
 - cloud security groups
-- external firewalls or NAT/DNAT rules
-- UFW, firewalld, or iptables policy
+- external firewall or NAT/DNAT rules
+- host firewall policy
 - DNS provider records
 - operating-system accounts, passwords, or SSH keys
 - application authentication
 - application TLS certificates
-
-Keeping those boundaries explicit makes the product smaller and easier to reason about.
-
-## Supported service model
-
-The stable core publishes **TCP** services:
-
-- SSH
-- HTTP
-- HTTPS passthrough
-- Custom TCP
-
-Each service gets a stable Service ID and a persistent public-port reservation.
+- TLS inspection, DLP, malware inspection, CASB, browser isolation, or full SWG/SASE functions
 
 ## Recommended reading order
 
-1. [Concepts & Mental Model](/getting-started/concepts) — terminology and diagrams
-2. [Quick Start](/getting-started/quickstart) — first working connection
-3. [Publishing Services](/guides/services) — SSH/web/custom/LAN examples
-4. [frpctl Guide](/frpctl/overview) — everyday operation
-5. [Architecture](/reference/architecture) — expert internals
+1. [Concepts & Mental Model](/getting-started/concepts)
+2. [Quick Start](/getting-started/quickstart)
+3. [Publishing Services](/guides/services)
+4. [drlink Guide](/drlink/overview)
+5. [Architecture](/reference/architecture)

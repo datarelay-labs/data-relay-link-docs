@@ -6,7 +6,7 @@ description: "Enroll and operate an Apple Silicon macOS client with the v2.2.1 s
 
 # macOS Client
 
-The published v2.2.1 client supports **Apple Silicon (`arm64`) on macOS 11 Big Sur or newer**. Intel Macs are not supported in this stable release. The macOS client uses the same enrollment protocol and pinned FRP **0.71.0** as the other supported clients.
+The published v2.2.1 client supports **Apple Silicon (`arm64`) on macOS 11 Big Sur or newer**. Intel Macs are not supported in this stable release. The macOS client uses the same enrollment protocol and bundled/tested relay engine **0.71.0** as the other supported clients.
 
 ## Requirements
 
@@ -22,15 +22,15 @@ xcode-select --install
 ```
 
 <Note>
-  FRP Auto Deploy does not enable **Remote Login**, create macOS users, change the macOS firewall, or install Homebrew packages. If you publish SSH, the SSH service and account must already work locally.
+  Data Relay Link does not enable **Remote Login**, create macOS users, change the macOS firewall, or install Homebrew packages. If you publish SSH, the SSH service and account must already work locally.
 </Note>
 
 ## Enroll the Mac
 
-On the FRP Auto Deploy server, create a Zero-Touch enrollment:
+On the Data Relay Link server, create a Zero-Touch enrollment:
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 Then choose:
@@ -39,39 +39,39 @@ Then choose:
 create zero-touch
 ```
 
-Send the generated command privately to the Mac and run **exactly what the stable server prints**. The shared bootstrap detects Darwin/Apple Silicon, downloads the pinned macOS `frpc` build, verifies its SHA-256, enrolls the client over verified HTTPS, and installs the launchd runtime.
+Send the generated command privately to the Mac and run **exactly what the stable server prints**. The shared bootstrap detects Darwin/Apple Silicon, downloads the pinned macOS relay-client build, verifies its SHA-256, enrolls the client over verified HTTPS, and installs the launchd runtime.
 
 For an SSH-oriented profile, make sure the SSH user specified by the administrator already exists on the Mac and that Remote Login is enabled if SSH access is required.
 
 ## Verify the client
 
 ```bash
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl doctor
+sudo drlink show status
+sudo drlink show services
+sudo drlink doctor
 ```
 
 Direct launchd inspection:
 
 ```bash
-sudo launchctl print system/com.datarelay.frp-auto-deploy.frpc
+sudo launchctl print system/com.datarelay.data-relay-link.client
 ```
 
 The client state lives under:
 
 ```text
-/Library/Application Support/frp-auto-deploy
+/Library/Application Support/data-relay-link
 ```
 
 The LaunchDaemon is:
 
 ```text
-/Library/LaunchDaemons/com.datarelay.frp-auto-deploy.frpc.plist
+/Library/LaunchDaemons/com.datarelay.data-relay-link.client.plist
 ```
 
 ## Reboot behavior
 
-The stable macOS client uses a system LaunchDaemon, so the FRP client is designed to return after reboot without requiring an interactive login. v2.2.1 release qualification included macOS lifecycle and reboot/autostart coverage.
+The stable macOS client uses a system LaunchDaemon, so the Data Relay Link client is designed to return after reboot without requiring an interactive login. v2.2.1 release qualification included macOS lifecycle and reboot/autostart coverage.
 
 ## Services
 
@@ -82,7 +82,7 @@ See [Services](/guides/services) for service lifecycle and target examples.
 ## Uninstall and release
 
 ```bash
-sudo frpctl uninstall
+sudo drlink uninstall
 ```
 
 Uninstall removes the local client software and LaunchDaemon. It intentionally does **not** return server-side port reservations automatically.
@@ -90,7 +90,7 @@ Uninstall removes the local client software and LaunchDaemon. It intentionally d
 When the machine is permanently retired, release it separately on the server:
 
 ```bash
-sudo frpctl release client <CLIENT-ID>
+sudo drlink release client <CLIENT-ID>
 ```
 
 <Warning>

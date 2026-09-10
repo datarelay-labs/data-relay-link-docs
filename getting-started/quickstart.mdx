@@ -12,7 +12,7 @@ This is the shortest stable **v2.2.1** path from an empty server to a working re
 ```mermaid
 flowchart LR
     U[Your laptop]
-    S[FRP Auto Deploy server]
+    S[Data Relay Link server]
     C[Remote Linux client\nbehind NAT/firewall]
     SSH[sshd\n127.0.0.1:22]
 
@@ -42,12 +42,12 @@ For a first deployment, **Ubuntu 24.04 x86_64** is the clearest real-validated b
 
 | Direction | Purpose | Default TCP |
 | --- | --- | --: |
-| Client → Server | FRP control | 443 |
+| Client → Server | Data Relay Link control | 443 |
 | Client → Server | Enrollment / management HTTPS | 6099 |
 | User → Server | Published services | 6000-6098 as assigned |
 
 <Warning>
-  FRP Auto Deploy does not automatically change cloud security groups, external firewalls, NAT rules, UFW, firewalld, or iptables.
+  Data Relay Link does not automatically change cloud security groups, external firewalls, NAT rules, UFW, firewalld, or iptables.
 </Warning>
 
 ## 1. Install the server
@@ -65,9 +65,9 @@ If the server is behind a firewall/NAT device, read [Firewall & NAT](/deployment
 ## 2. Verify the server
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink doctor
 ```
 
 <Check>
@@ -81,7 +81,7 @@ sudo frpctl doctor
 Start the CLI:
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 Then use:
@@ -97,7 +97,7 @@ This is the recommended everyday onboarding path.
 For a predictable SSH profile from the shell:
 
 ```bash
-sudo frpctl create enrollment \
+sudo drlink create enrollment \
   --one-line \
   --ssh \
   --ssh-user <ssh-user> \
@@ -106,7 +106,7 @@ sudo frpctl create enrollment \
 
 Replace `<ssh-user>` with an SSH user that **already exists on the remote client**.
 
-FRP Auto Deploy does not create OS users, install/configure `sshd`, change passwords, or manage SSH keys.
+Data Relay Link does not create OS users, install/configure `sshd`, change passwords, or manage SSH keys.
 
 ## 4. Run the generated command on the client
 
@@ -115,7 +115,7 @@ Send the **exact generated command** to the remote operator through an appropria
 ```mermaid
 sequenceDiagram
     participant A as Server admin
-    participant S as FRP server
+    participant S as Data Relay Link server
     participant C as Remote client
 
     A->>S: create zero-touch / enrollment
@@ -123,7 +123,7 @@ sequenceDiagram
     A-->>C: send privately
     C->>S: HTTPS bootstrap + enrollment
     S-->>C: persistent identity + service config
-    C->>S: outbound FRP control tunnel
+    C->>S: outbound Data Relay Link control tunnel
 ```
 
 Treat the generated bootstrap command as sensitive until it is used, expires, or is revoked.
@@ -131,24 +131,24 @@ Treat the generated bootstrap command as sensitive until it is used, expires, or
 ## 5. Verify on the client
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl show info
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink show info
+sudo drlink doctor
 ```
 
 ## 6. Verify on the server
 
 ```bash
-sudo frpctl show clients
-sudo frpctl show enrollments
+sudo drlink show clients
+sudo drlink show enrollments
 ```
 
 Then inspect the assigned service port:
 
 ```bash
-sudo frpctl show client <CLIENT-ID> services
+sudo drlink show client <CLIENT-ID> services
 ```
 
 The client receives a persistent CLIENT ID and the SSH service receives a persistent public-port reservation.
@@ -156,7 +156,7 @@ The client receives a persistent CLIENT ID and the SSH service receives a persis
 ## 7. Connect over SSH
 
 ```bash
-ssh -p <public-port> <ssh-user>@<FRP-server-public-IP>
+ssh -p <public-port> <ssh-user>@<Data Relay Link-server-public-IP>
 ```
 
 With an optional public service hostname:
@@ -172,13 +172,13 @@ You are finished when all of these are true:
 - the client appears in `show clients`
 - the client has a CLIENT ID
 - the SSH service has an assigned public port
-- the client reports healthy FRP state
+- the client reports healthy Data Relay Link state
 - the public service port is allowed through the server-side firewall/NAT
 - SSH reaches the intended target
 
 ## If it does not work
 
-Use [Troubleshooting](/troubleshooting/overview) and run `frpctl doctor` on both sides **before** editing generated config, registry, identity, or PKI files.
+Use [Troubleshooting](/troubleshooting/overview) and run `drlink doctor` on both sides **before** editing generated config, registry, identity, or PKI files.
 
 ## Next steps
 
@@ -186,4 +186,4 @@ Use [Troubleshooting](/troubleshooting/overview) and run `frpctl doctor` on both
 - [Linux Client](/getting-started/linux-client)
 - [Publishing Services](/guides/services)
 - [Deployment Modes](/deployment/modes)
-- [frpctl Guide](/frpctl/overview)
+- [drlink Guide](/drlink/overview)

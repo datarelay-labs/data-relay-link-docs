@@ -1,6 +1,6 @@
 ---
 title: "OCI Free Tier Server Preparation"
-description: "Prepare an Ubuntu FRP Auto Deploy server with an OCI Always Free-eligible VM and a persistent Reserved Public IPv4 address."
+description: "Prepare an Ubuntu Data Relay Link server with an OCI Always Free-eligible VM and a persistent Reserved Public IPv4 address."
 sidebarTitle: "OCI Free Tier Server"
 icon: "cloud"
 keywords:
@@ -11,12 +11,12 @@ keywords:
   - "Reserved Public IP"
   - "static IP"
   - "Ubuntu"
-  - "FRP server"
+  - "Data Relay Link server"
 ---
 
-# OCI Free Tier FRP Server
+# OCI Free Tier Data Relay Link Server
 
-This guide takes you from an empty OCI tenancy to a working **FRP Auto Deploy v2.2.1** server and the first SSH client. It reuses the actual OCI Console screenshots from the original `frp.datarelay.run` deployment guide, while updating all FRP commands and product behavior to the current stable release.
+This guide takes you from an empty OCI tenancy to a working **Data Relay Link v2.2.1** server and the first SSH client. It reuses the actual OCI Console screenshots from the original deployment guide while updating all commands and product behavior to the current Data Relay Link stable release.
 
 <Note>
   OCI Console labels, Free Tier eligibility, capacity, and pricing can change. Treat the current Console's **Always Free Eligible** indicator and cost estimate as the final source before creating resources. Oracle also documents that idle Always Free compute instances may be reclaimed after a sustained low-usage period, so do not treat a Free Tier VM as an SLA-backed production host without reviewing the current OCI policy.
@@ -27,24 +27,24 @@ This guide takes you from an empty OCI tenancy to a working **FRP Auto Deploy v2
 ```mermaid
 flowchart TD
     U[Remote user] -->|SSH / HTTP / HTTPS / TCP service port| PUB[OCI Reserved Public IPv4]
-    C[Remote FRP client\nbehind NAT/firewall] -->|Outbound TCP 443 / WSS| PUB
-    PUB --> VM[Ubuntu 24.04\nFRP Auto Deploy server]
+    C[Remote Data Relay Link client\nbehind NAT/firewall] -->|Outbound TCP 443 / WSS| PUB
+    PUB --> VM[Ubuntu 24.04\nData Relay Link server]
     VM -->|public 443| FE[single-443 frontend]
-    FE -->|loopback 7000| FRPS[frps]
+    FE -->|loopback 7000| RS[relay backend]
     FE -->|loopback 6099| ENR[Enrollment / management]
     VM --> PORTS[Published service ports\n6000-6098]
 ```
 
-The high-resolution architecture diagram below shows the same deployment from the operator's point of view: one OCI Reserved Public IP fronts the FRP Auto Deploy server, while each remote client publishes one or more local or reachable LAN services through its assigned persistent public ports.
+The high-resolution architecture diagram below shows the same deployment from the operator's point of view: one OCI Reserved Public IP fronts the Data Relay Link server, while each remote client publishes one or more local or reachable LAN services through its assigned persistent public ports.
 
-![FRP SSH access architecture using an OCI Reserved Public IP](/images/oci/53.png)
+![Data Relay Link SSH access architecture using an OCI Reserved Public IP](/images/oci/53.png)
 
 For this OCI walkthrough we use **Enterprise single-443** because it gives a simple public policy:
 
 | Public ingress | Purpose |
 | --- | --- |
 | TCP 22 | OCI server administration; restrict to your admin IP `/32` |
-| TCP 443 | FRP control over WSS + enrollment/management HTTPS |
+| TCP 443 | Data Relay Link control over WSS + enrollment/management HTTPS |
 | TCP 6000-6098 | Published client services; restrict further when practical |
 | TCP 6099 | **Do not expose** in single-443 |
 | TCP 7000 | **Do not expose** in single-443 |
@@ -53,17 +53,17 @@ Direct mode is also fully supported. In Direct mode, TCP 6099 is a separate publ
 
 ## 10-minute map
 
-| Step | OCI / FRP action | Value used in this guide |
+| Step | OCI / Data Relay Link action | Value used in this guide |
 | --: | --- | --- |
-| 1 | Create VCN | `frp-vcn` / `10.0.0.0/16` |
+| 1 | Create VCN | `data-relay-vcn` / `10.0.0.0/16` |
 | 2 | Internet Gateway + route | `0.0.0.0/0` → Internet Gateway |
-| 3 | Create public subnet | `frp-public-subnet` / `10.0.0.0/24` |
+| 3 | Create public subnet | `data-relay-public-subnet` / `10.0.0.0/24` |
 | 4 | Security List | admin SSH, `443`, `6000-6098` |
 | 5 | Create VM | Ubuntu 24.04 x86_64 / `VM.Standard.E2.1.Micro` when eligible |
 | 6 | Public address | attach a **Reserved Public IPv4** |
 | 7 | SSH | `ubuntu@<RESERVED-IP>` |
-| 8 | Install FRP Auto Deploy | immutable `v2.2.1` |
-| 9 | Verify | `frpctl doctor` + listener checks |
+| 8 | Install Data Relay Link | immutable `v2.2.1` |
+| 9 | Verify | `drlink doctor` + listener checks |
 | 10 | Add first client | current one-line Zero-Touch enrollment |
 
 # Part I — Build the OCI network and VM
@@ -79,11 +79,11 @@ From the OCI Home page, enter **Networking → Virtual Cloud Networks**. The ima
 Use these values:
 
 ```text
-VCN name             frp-vcn
+VCN name             data-relay-vcn
 VCN IPv4 CIDR         10.0.0.0/16
-Internet Gateway      frp-internet-gateway
+Internet Gateway      data-relay-internet-gateway
 Default route         0.0.0.0/0 -> Internet Gateway
-Public subnet         frp-public-subnet
+Public subnet         data-relay-public-subnet
 Public subnet CIDR    10.0.0.0/24
 Subnet type           Regional / Public
 ```
@@ -94,23 +94,23 @@ Open **Virtual Cloud Networks → Create VCN**.
 
 ![Picture 2. Select Create VCN in Virtual Cloud Networks](/images/oci/2.png)
 
-Set the VCN name to `frp-vcn` and the IPv4 CIDR to `10.0.0.0/16`.
+Set the VCN name to `data-relay-vcn` and the IPv4 CIDR to `10.0.0.0/16`.
 
 ![Picture 3. Configure the VCN name and IPv4 CIDR](/images/oci/3.png)
 
 ### 2-2. Create the Internet Gateway
 
-In the new `frp-vcn`, open the **Gateways** tab and create an Internet Gateway.
+In the new `data-relay-vcn`, open the **Gateways** tab and create an Internet Gateway.
 
 ![Picture 4. Create an Internet Gateway from the VCN Gateways tab](/images/oci/4.png)
 
-Use `frp-internet-gateway` as the example gateway name.
+Use `data-relay-internet-gateway` as the example gateway name.
 
-![Picture 5. Internet Gateway name example: frp-internet-gateway](/images/oci/5.png)
+![Picture 5. Internet Gateway name example: data-relay-internet-gateway](/images/oci/5.png)
 
 ### 2-3. Add the Internet route to the default route table
 
-Open the **Routing** tab and select `Default Route Table for frp-vcn`.
+Open the **Routing** tab and select `Default Route Table for data-relay-vcn`.
 
 ![Picture 6. Select the default route table from the VCN Routing tab](/images/oci/6.png)
 
@@ -123,7 +123,7 @@ Add the following route:
 ```text
 Target Type        Internet Gateway
 Destination CIDR   0.0.0.0/0
-Target             frp-internet-gateway
+Target             data-relay-internet-gateway
 ```
 
 ![Picture 8. Add the 0.0.0.0/0 route through the Internet Gateway](/images/oci/8.png)
@@ -143,10 +143,10 @@ Open the **Subnets** tab and select **Create Subnet**.
 Create the public subnet with the following values:
 
 ```text
-Name           frp-public-subnet
+Name           data-relay-public-subnet
 Subnet Type    Regional
 IPv4 CIDR      10.0.0.0/24
-Route Table    Default Route Table for frp-vcn
+Route Table    Default Route Table for data-relay-vcn
 Subnet Access  Public Subnet
 ```
 
@@ -162,7 +162,7 @@ Review the ingress rules on the **Default Security List**.
 
 ![Picture 13. Review the Default Security List ingress rules](/images/oci/13.png)
 
-For FRP Auto Deploy in single-443 mode, add TCP 443 and the published-service range TCP 6000-6098. Keep SSH 22 for administration, preferably restricted to your administrator public IP `/32`.
+For Data Relay Link in single-443 mode, add TCP 443 and the published-service range TCP 6000-6098. Keep SSH 22 for administration, preferably restricted to your administrator public IP `/32`.
 
 ![Picture 14. Add ingress rules for TCP 443 and TCP 6000-6098](/images/oci/14.png)
 
@@ -189,11 +189,11 @@ If you do not want the whole `6000-6098` range exposed, allow only the service p
 Recommended values for this walkthrough:
 
 ```text
-Name           frp-server
+Name           data-relay-link-server
 Image          Canonical Ubuntu 24.04 LTS x86_64
 Shape          VM.Standard.E2.1.Micro (when Console marks it eligible/free)
-VCN            frp-vcn
-Subnet         frp-public-subnet
+VCN            data-relay-vcn
+Subnet         data-relay-public-subnet
 Boot volume    default
 ```
 
@@ -219,9 +219,9 @@ Unless your environment requires something different, keep the Security settings
 
 ### 3-3. Select the VCN and public subnet
 
-Under Primary VNIC, select the `frp-vcn` and `frp-public-subnet` created earlier.
+Under Primary VNIC, select the `data-relay-vcn` and `data-relay-public-subnet` created earlier.
 
-![Picture 20. Select the existing frp-vcn and frp-public-subnet](/images/oci/20.png)
+![Picture 20. Select the existing data-relay-vcn and data-relay-public-subnet](/images/oci/20.png)
 
 ### 3-4. Disable automatic public IPv4 and configure the SSH key
 
@@ -253,8 +253,8 @@ The **Always Free** indicator shown in the original screenshot reflects the OCI 
 
 Important points from the original deployment:
 
-- choose the existing `frp-vcn`
-- choose `frp-public-subnet`
+- choose the existing `data-relay-vcn`
+- choose `data-relay-public-subnet`
 - allow OCI to assign the **private IPv4** automatically
 - turn off **Automatically assign public IPv4 address** for the final persistent-IP design
 - generate/download or upload an SSH public key
@@ -288,12 +288,12 @@ Edit the private IP again and choose:
 ```text
 Public IP type        Reserved public IP
 Option                Create new Reserved IP Address
-Name                  frp-reserved-public-ip
+Name                  data-relay-reserved-public-ip
 ```
 
 ![Picture 30. Create and attach a new Reserved Public IP](/images/oci/30.png)
 
-A Reserved Public IP is the address you should treat as the persistent public entry point for FRP Auto Deploy. OCI performs the public/private mapping outside the Ubuntu guest, so `ip addr` on the VM normally shows the private `10.x.x.x` address rather than the public address.
+A Reserved Public IP is the address you should treat as the persistent public entry point for Data Relay Link. OCI performs the public/private mapping outside the Ubuntu guest, so `ip addr` on the VM normally shows the private `10.x.x.x` address rather than the public address.
 
 Confirm that the Reserved Public IP is attached to the Primary Private IP. The public IP value in this screenshot has been masked before publication.
 
@@ -328,7 +328,7 @@ OS             Ubuntu 24.04 LTS
 PID 1          systemd
 ```
 
-# Part II — Install FRP Auto Deploy v2.2.1
+# Part II — Install Data Relay Link v2.2.1
 
 ## 6. Prepare only the packages you need
 
@@ -346,7 +346,7 @@ sudo iptables -S INPUT
 ```
 
 <Warning>
-  The older field notes contained an environment-specific procedure that flushed the Ubuntu `INPUT` chain. **Do not blindly run `iptables -F` or change the default INPUT policy just for FRP Auto Deploy.** OCI Security Lists/NSGs and the Ubuntu host firewall are separate security boundaries; configure each deliberately for your environment.
+  The older field notes contained an environment-specific procedure that flushed the Ubuntu `INPUT` chain. **Do not blindly run `iptables -F` or change the default INPUT policy just for Data Relay Link.** OCI Security Lists/NSGs and the Ubuntu host firewall are separate security boundaries; configure each deliberately for your environment.
 </Warning>
 
 ## 7. Install the immutable stable release
@@ -363,11 +363,11 @@ For this OCI walkthrough, choose **Enterprise single-443** when the installer as
 Public host                  <RESERVED-PUBLIC-IP or DNS>
 Deployment mode              Enterprise single-443
 Public control               TCP 443
-FRP backend                  127.0.0.1:7000
+Data Relay Link backend                  127.0.0.1:7000
 Public enrollment/management HTTPS 443
 Allocator backend            127.0.0.1:6099
 Published service range      TCP 6000-6098
-Pinned FRP                   0.71.0
+Bundled/tested relay engine             0.71.0
 Project                       2.2.1
 ```
 
@@ -376,9 +376,9 @@ Do not copy the v2.1.0 environment-variable installation command from the old gu
 ## 8. Verify the server
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink doctor
 ```
 
 For single-443, also inspect the listeners:
@@ -401,7 +401,7 @@ From another machine on the Internet:
 nc -vz -w 3 <RESERVED-PUBLIC-IP> 443
 ```
 
-`frpctl doctor` should have no blocking failure before onboarding clients.
+`drlink doctor` should have no blocking failure before onboarding clients.
 
 ## 9. Verify reboot persistence
 
@@ -412,8 +412,8 @@ sudo reboot
 After reconnecting:
 
 ```bash
-sudo frpctl show status
-sudo frpctl doctor
+sudo drlink show status
+sudo drlink doctor
 sudo ss -lntp | grep -E ':(443|6099|7000)\b'
 ```
 
@@ -423,10 +423,10 @@ The services and listener topology should return without re-enrollment or manual
 
 ## 10. Generate a Zero-Touch SSH enrollment
 
-On the FRP server:
+On the Data Relay Link server:
 
 ```bash
-sudo frpctl create enrollment \
+sudo drlink create enrollment \
   --one-line \
   --ssh \
   --ssh-user <EXISTING-CLIENT-USER> \
@@ -439,25 +439,25 @@ The command printed by the server contains a short-lived, one-time bootstrap cre
   Treat a generated Zero-Touch command as sensitive until it expires or is used. Do not paste a live ticket into public chat, documentation, or issue trackers.
 </Warning>
 
-On the client, run the generated line. FRP Auto Deploy does not create the SSH user or `sshd`; they must already exist.
+On the client, run the generated line. Data Relay Link does not create the SSH user or `sshd`; they must already exist.
 
 ## 11. Verify the client and connect
 
 On the client:
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink doctor
 ```
 
 On the server:
 
 ```bash
-sudo frpctl show clients
-sudo frpctl show client <CLIENT-ID>
-sudo frpctl show client <CLIENT-ID> services
+sudo drlink show clients
+sudo drlink show client <CLIENT-ID>
+sudo drlink show client <CLIENT-ID> services
 ```
 
 Then use the assigned persistent public service port:
@@ -466,7 +466,7 @@ Then use the assigned persistent public service port:
 ssh -p <PUBLIC-SERVICE-PORT> <CLIENT-USER>@<RESERVED-PUBLIC-IP>
 ```
 
-The **client does not manually choose the public port**. The FRP server allocates and persists the service reservation.
+The **client does not manually choose the public port**. The Data Relay Link server allocates and persists the service reservation.
 
 # Final checklist
 
@@ -481,8 +481,8 @@ The **client does not manually choose the public port**. The FRP server allocate
 - [ ] Ubuntu 24.04 x86_64 VM is running
 - [ ] Reserved Public IPv4 is attached
 - [ ] SSH to the VM succeeds
-- [ ] FRP Auto Deploy reports project 2.2.1 / pinned FRP 0.71.0
-- [ ] `frpctl doctor` has no blocking finding
+- [ ] Data Relay Link reports project 2.2.1 / bundled relay engine 0.71.0
+- [ ] `drlink doctor` has no blocking finding
 - [ ] listener exposure matches the selected topology
 - [ ] state survives reboot
 - [ ] first Zero-Touch client enrolls and the assigned SSH public port works
@@ -492,10 +492,10 @@ The **client does not manually choose the public port**. The FRP server allocate
 When a published service cannot be reached, test both halves independently:
 
 ```bash
-# From an external workstation: Internet -> FRP server
+# From an external workstation: Internet -> Data Relay Link server
 nc -vz -w 3 <RESERVED-PUBLIC-IP> <PUBLIC-SERVICE-PORT>
 
-# From the FRP client: client -> local/LAN target
+# From the Data Relay Link client: client -> local/LAN target
 nc -vz -w 3 <TARGET-IP> <TARGET-PORT>
 ```
 

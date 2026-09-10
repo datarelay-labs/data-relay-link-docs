@@ -1,6 +1,6 @@
 ---
 title: "OCI 무료티어 서버 준비"
-description: "고정 공인 IP나 무료 서버가 없다면 OCI Always Free VM과 Reserved Public IPv4를 사용해 FRP Auto Deploy 서버용 Ubuntu Linux를 준비합니다."
+description: "고정 공인 IP나 무료 서버가 없다면 OCI Always Free VM과 Reserved Public IPv4를 사용해 Data Relay Link 서버용 Ubuntu Linux를 준비합니다."
 sidebarTitle: "OCI 무료티어 서버 준비"
 icon: "cloud"
 keywords:
@@ -11,12 +11,12 @@ keywords:
   - "Reserved Public IP"
   - "고정 IP"
   - "Ubuntu"
-  - "FRP 서버"
+  - "Data Relay Link 서버"
 ---
 
-# OCI 무료티어 FRP 서버 구축
+# OCI 무료티어 Data Relay Link 서버 구축
 
-이 가이드는 빈 OCI 환경에서 시작해 **FRP Auto Deploy v2.2.1 서버를 만들고 첫 번째 SSH Client를 연결하는 단계까지** 한 번에 설명합니다. 화면은 기존 `frp.datarelay.run` OCI 구축 문서에서 실제로 사용했던 OCI Console 스크린샷을 재사용하고, FRP 명령과 동작 설명만 현재 stable 기준으로 업데이트했습니다.
+이 가이드는 빈 OCI 환경에서 시작해 **Data Relay Link v2.2.1 서버를 만들고 첫 번째 SSH Client를 연결하는 단계까지** 한 번에 설명합니다. 화면은 기존 OCI 구축 문서에서 실제로 사용했던 OCI Console 스크린샷을 재사용하고, Data Relay Link 명령과 동작 설명만 현재 stable 기준으로 업데이트했습니다.
 
 <Note>
   OCI Console 메뉴명, Free Tier 정책, 리전별 capacity와 가격은 바뀔 수 있습니다. 실제 생성 직전 Console의 **Always Free Eligible** 표시와 예상 비용을 최종 기준으로 확인하세요. Oracle은 장기간 사용량이 낮은 Always Free Compute Instance를 회수할 수 있다고 명시하므로, 현재 OCI 정책을 확인하지 않은 채 Free Tier VM을 SLA가 보장되는 운영 서버로 가정하지 마세요.
@@ -27,10 +27,10 @@ keywords:
 ```mermaid
 flowchart TD
     U[외부 사용자] -->|SSH / HTTP / HTTPS / TCP 서비스 포트| PUB[OCI Reserved Public IPv4]
-    C[원격 FRP Client\nNAT/방화벽 뒤] -->|Outbound TCP 443 / WSS| PUB
-    PUB --> VM[Ubuntu 24.04\nFRP Auto Deploy Server]
+    C[원격 Data Relay Link Client\nNAT/방화벽 뒤] -->|Outbound TCP 443 / WSS| PUB
+    PUB --> VM[Ubuntu 24.04\nData Relay Link Server]
     VM -->|Public 443| FE[single-443 frontend]
-    FE -->|loopback 7000| FRPS[frps]
+    FE -->|loopback 7000| S[relay backend]
     FE -->|loopback 6099| ENR[Enrollment / Management]
     VM --> PORTS[Published service ports\n6000-6098]
 ```
@@ -40,7 +40,7 @@ flowchart TD
 | Public ingress | 용도 |
 | --- | --- |
 | TCP 22 | OCI 서버 관리용 SSH. 가능하면 관리자 IP `/32`로 제한 |
-| TCP 443 | FRP control over WSS + Enrollment/Management HTTPS |
+| TCP 443 | Data Relay Link control over WSS + Enrollment/Management HTTPS |
 | TCP 6000-6098 | Client가 게시한 서비스. 필요하면 실제 사용 포트/source만 허용 |
 | TCP 6099 | single-443에서는 **외부 공개 금지** |
 | TCP 7000 | single-443에서는 **외부 공개 금지** |
@@ -51,15 +51,15 @@ Direct 모드도 stable 지원입니다. Direct를 선택하면 TCP 6099가 별�
 
 | 순서 | 작업 | 이 가이드의 값 |
 | --: | --- | --- |
-| 1 | VCN 생성 | `frp-vcn` / `10.0.0.0/16` |
+| 1 | VCN 생성 | `data-relay-vcn` / `10.0.0.0/16` |
 | 2 | Internet Gateway + Route | `0.0.0.0/0` → Internet Gateway |
-| 3 | Public Subnet | `frp-public-subnet` / `10.0.0.0/24` |
+| 3 | Public Subnet | `data-relay-public-subnet` / `10.0.0.0/24` |
 | 4 | Security List | 관리용 SSH, `443`, `6000-6098` |
 | 5 | Compute Instance | Ubuntu 24.04 x86_64 / eligible일 때 `VM.Standard.E2.1.Micro` |
 | 6 | Public 주소 | **Reserved Public IPv4** 연결 |
 | 7 | SSH 접속 | `ubuntu@<RESERVED-IP>` |
-| 8 | FRP 설치 | immutable `v2.2.1` |
-| 9 | 검증 | `frpctl doctor` + listener 확인 |
+| 8 | Data Relay Link 설치 | immutable `v2.2.1` |
+| 9 | 검증 | `drlink doctor` + listener 확인 |
 | 10 | 첫 Client | 현재 Zero-Touch one-line Enrollment |
 
 # Part I — OCI 네트워크와 VM 만들기
@@ -75,11 +75,11 @@ OCI Home에서 **Networking → Virtual Cloud Networks**로 이동합니다. 아
 다음 값을 사용합니다.
 
 ```text
-VCN name             frp-vcn
+VCN name             data-relay-vcn
 VCN IPv4 CIDR         10.0.0.0/16
-Internet Gateway      frp-internet-gateway
+Internet Gateway      data-relay-internet-gateway
 Default route         0.0.0.0/0 -> Internet Gateway
-Public subnet         frp-public-subnet
+Public subnet         data-relay-public-subnet
 Public subnet CIDR    10.0.0.0/24
 Subnet type           Regional / Public
 ```
@@ -90,23 +90,23 @@ Subnet type           Regional / Public
 
 ![그림 2. Virtual Cloud Networks에서 Create VCN 선택](/images/oci/2.png)
 
-VCN 이름은 `frp-vcn`, IPv4 CIDR은 `10.0.0.0/16`으로 설정합니다.
+VCN 이름은 `data-relay-vcn`, IPv4 CIDR은 `10.0.0.0/16`으로 설정합니다.
 
 ![그림 3. VCN 이름과 IPv4 CIDR 설정](/images/oci/3.png)
 
 ### 2-2. Internet Gateway 생성
 
-생성한 `frp-vcn`의 **Gateways** 탭에서 Internet Gateway를 생성합니다.
+생성한 `data-relay-vcn`의 **Gateways** 탭에서 Internet Gateway를 생성합니다.
 
 ![그림 4. VCN의 Gateways 탭에서 Internet Gateway 생성](/images/oci/4.png)
 
-Internet Gateway 이름은 예제 기준 `frp-internet-gateway`입니다.
+Internet Gateway 이름은 예제 기준 `data-relay-internet-gateway`입니다.
 
-![그림 5. Internet Gateway 이름 예: frp-internet-gateway](/images/oci/5.png)
+![그림 5. Internet Gateway 이름 예: data-relay-internet-gateway](/images/oci/5.png)
 
 ### 2-3. Default Route Table에 인터넷 경로 추가
 
-**Routing** 탭에서 `Default Route Table for frp-vcn`을 선택합니다.
+**Routing** 탭에서 `Default Route Table for data-relay-vcn`을 선택합니다.
 
 ![그림 6. VCN Routing 탭에서 Default Route Table 선택](/images/oci/6.png)
 
@@ -119,7 +119,7 @@ Internet Gateway 이름은 예제 기준 `frp-internet-gateway`입니다.
 ```text
 Target Type        Internet Gateway
 Destination CIDR   0.0.0.0/0
-Target             frp-internet-gateway
+Target             data-relay-internet-gateway
 ```
 
 ![그림 8. Internet Gateway로 0.0.0.0/0 경로 추가](/images/oci/8.png)
@@ -139,10 +139,10 @@ Target             frp-internet-gateway
 Public Subnet은 다음 값으로 생성합니다.
 
 ```text
-Name           frp-public-subnet
+Name           data-relay-public-subnet
 Subnet Type    Regional
 IPv4 CIDR      10.0.0.0/24
-Route Table    Default Route Table for frp-vcn
+Route Table    Default Route Table for data-relay-vcn
 Subnet Access  Public Subnet
 ```
 
@@ -158,7 +158,7 @@ Subnet Access  Public Subnet
 
 ![그림 13. Default Security List의 Ingress Rules](/images/oci/13.png)
 
-FRP Auto Deploy single-443 기준으로 TCP 443과 Published Service 범위인 TCP 6000-6098을 추가합니다. SSH 22는 기존 관리용 규칙을 유지하되 가능하면 관리자 공인 IP `/32`로 제한합니다.
+Data Relay Link single-443 기준으로 TCP 443과 Published Service 범위인 TCP 6000-6098을 추가합니다. SSH 22는 기존 관리용 규칙을 유지하되 가능하면 관리자 공인 IP `/32`로 제한합니다.
 
 ![그림 14. Ingress Rule 추가 - TCP 443 및 TCP 6000-6098](/images/oci/14.png)
 
@@ -175,7 +175,7 @@ FRP Auto Deploy single-443 기준으로 TCP 443과 Published Service 범위인 T
 | TCP | 6000-6098 | 실제 서비스가 필요한 source | Published services |
 
 <Warning>
-  **single-443에서는 6099와 7000을 OCI Public Ingress에 열지 않습니다.** 두 포트는 서버 내부 loopback backend입니다. 또한 다른 OCI 예제 화면의 `All Protocols` 규칙을 그대로 복사하지 말고 위 FRP용 최소 규칙을 사용하세요.
+  **single-443에서는 6099와 7000을 OCI Public Ingress에 열지 않습니다.** 두 포트는 서버 내부 loopback backend입니다. 또한 다른 OCI 예제 화면의 `All Protocols` 규칙을 그대로 복사하지 말고 위 Data Relay Link용 최소 규칙을 사용하세요.
 </Warning>
 
 `6000-6098` 전체를 미리 열고 싶지 않다면 실제 배정된 서비스 포트만 열고 source CIDR도 제한할 수 있습니다.
@@ -185,11 +185,11 @@ FRP Auto Deploy single-443 기준으로 TCP 443과 Published Service 범위인 T
 이 가이드의 권장값:
 
 ```text
-Name           frp-server
+Name           data-relay-link-server
 Image          Canonical Ubuntu 24.04 LTS x86_64
 Shape          VM.Standard.E2.1.Micro (Console에서 Free/Eligible로 표시될 때)
-VCN            frp-vcn
-Subnet         frp-public-subnet
+VCN            data-relay-vcn
+Subnet         data-relay-public-subnet
 Boot volume    기본값
 ```
 
@@ -215,9 +215,9 @@ Security 설정은 별도 요구가 없다면 기본값을 사용합니다.
 
 ### 3-3. VCN과 Public Subnet 선택
 
-Primary VNIC에서 앞에서 만든 `frp-vcn`과 `frp-public-subnet`을 각각 선택합니다.
+Primary VNIC에서 앞에서 만든 `data-relay-vcn`과 `data-relay-public-subnet`을 각각 선택합니다.
 
-![그림 20. 기존 frp-vcn과 frp-public-subnet 선택](/images/oci/20.png)
+![그림 20. 기존 data-relay-vcn과 data-relay-public-subnet 선택](/images/oci/20.png)
 
 ### 3-4. Public IPv4 자동할당 해제 및 SSH Key 설정
 
@@ -249,8 +249,8 @@ Instance 목록에서 생성 상태를 확인합니다.
 
 중요한 부분은 다음입니다.
 
-- 기존 `frp-vcn` 선택
-- `frp-public-subnet` 선택
+- 기존 `data-relay-vcn` 선택
+- `data-relay-public-subnet` 선택
 - Private IPv4는 자동 할당
 - 최종 고정 IP 구성을 위해 **Automatically assign public IPv4 address를 끔**
 - 기존 SSH public key를 넣거나 OCI에서 새 key pair 생성
@@ -284,12 +284,12 @@ Public IP가 미할당 상태인지 확인합니다.
 ```text
 Public IP type        Reserved public IP
 Option                Create new Reserved IP Address
-Name                  frp-reserved-public-ip
+Name                  data-relay-reserved-public-ip
 ```
 
 ![그림 30. 새 Reserved Public IP 생성 및 연결](/images/oci/30.png)
 
-이 Reserved Public IP가 FRP Auto Deploy의 지속적인 공인 진입점이 됩니다. OCI에서는 Public IP가 Ubuntu NIC에 직접 설정되는 것이 아니라 OCI 측에서 private VNIC 주소와 매핑되기 때문에 Ubuntu의 `ip addr`에서는 `10.x.x.x` 같은 Private IP만 보이는 것이 정상입니다.
+이 Reserved Public IP가 Data Relay Link의 지속적인 공인 진입점이 됩니다. OCI에서는 Public IP가 Ubuntu NIC에 직접 설정되는 것이 아니라 OCI 측에서 private VNIC 주소와 매핑되기 때문에 Ubuntu의 `ip addr`에서는 `10.x.x.x` 같은 Private IP만 보이는 것이 정상입니다.
 
 Reserved Public IP가 Primary Private IP에 정상 연결되었는지 확인합니다. 아래 그림 31의 공인 IP 값은 공개 문서용으로 마스킹된 화면입니다.
 
@@ -324,7 +324,7 @@ OS             Ubuntu 24.04 LTS
 PID 1          systemd
 ```
 
-# Part II — FRP Auto Deploy v2.2.1 설치
+# Part II — Data Relay Link v2.2.1 설치
 
 ## 6. 최소 패키지와 Host Firewall 확인
 
@@ -355,11 +355,11 @@ curl -fsSL \
 Public host                  <RESERVED-PUBLIC-IP 또는 DNS>
 Deployment mode              Enterprise single-443
 Public control               TCP 443
-FRP backend                  127.0.0.1:7000
+Data Relay Link backend                  127.0.0.1:7000
 Public Enrollment/Management HTTPS 443
 Allocator backend            127.0.0.1:6099
 Published service range      TCP 6000-6098
-Pinned FRP                   0.71.0
+Bundled relay engine                    0.71.0
 Project                       2.2.1
 ```
 
@@ -368,9 +368,9 @@ Project                       2.2.1
 ## 8. Server 상태 확인
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink doctor
 ```
 
 single-443 listener도 확인합니다.
@@ -393,7 +393,7 @@ sudo ss -lntp | grep -E ':(443|6099|7000)\b'
 nc -vz -w 3 <RESERVED-PUBLIC-IP> 443
 ```
 
-를 실행해 Public 443도 확인합니다. Client를 붙이기 전 `frpctl doctor`에 blocking failure가 없어야 합니다.
+를 실행해 Public 443도 확인합니다. Client를 붙이기 전 `drlink doctor`에 blocking failure가 없어야 합니다.
 
 ## 9. 재부팅 후 영속성 확인
 
@@ -404,8 +404,8 @@ sudo reboot
 다시 접속 후:
 
 ```bash
-sudo frpctl show status
-sudo frpctl doctor
+sudo drlink show status
+sudo drlink doctor
 sudo ss -lntp | grep -E ':(443|6099|7000)\b'
 ```
 
@@ -415,10 +415,10 @@ sudo ss -lntp | grep -E ':(443|6099|7000)\b'
 
 ## 10. Zero-Touch SSH Enrollment 생성
 
-FRP Server에서:
+Data Relay Link Server에서:
 
 ```bash
-sudo frpctl create enrollment \
+sudo drlink create enrollment \
   --one-line \
   --ssh \
   --ssh-user <CLIENT에 실제 존재하는 계정> \
@@ -431,25 +431,25 @@ sudo frpctl create enrollment \
   생성된 Zero-Touch 명령에는 만료시간이 있는 one-time bootstrap credential이 들어 있으므로 사용/만료 전까지 secret처럼 취급합니다. 공개 채팅, 문서, 티켓에 실제 살아 있는 명령을 남기지 마세요.
 </Warning>
 
-FRP Auto Deploy는 Client의 SSH 계정, password, SSH key, `sshd`를 생성하지 않습니다. `--ssh-user`의 계정과 SSH 서비스는 Client에 이미 존재해야 합니다.
+Data Relay Link는 Client의 SSH 계정, password, SSH key, `sshd`를 생성하지 않습니다. `--ssh-user`의 계정과 SSH 서비스는 Client에 이미 존재해야 합니다.
 
 ## 11. Client 상태와 실제 SSH 확인
 
 Client:
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink doctor
 ```
 
 Server:
 
 ```bash
-sudo frpctl show clients
-sudo frpctl show client <CLIENT-ID>
-sudo frpctl show client <CLIENT-ID> services
+sudo drlink show clients
+sudo drlink show client <CLIENT-ID>
+sudo drlink show client <CLIENT-ID> services
 ```
 
 실제 연결:
@@ -462,10 +462,10 @@ ssh -p <할당된-PUBLIC-SERVICE-PORT> <CLIENT-USER>@<RESERVED-PUBLIC-IP>
 
 # 최종 체크리스트
 
-- [ ] `frp-vcn` / `10.0.0.0/16`
+- [ ] `data-relay-vcn` / `10.0.0.0/16`
 - [ ] Internet Gateway 생성
 - [ ] `0.0.0.0/0 → Internet Gateway` Route
-- [ ] `frp-public-subnet` / `10.0.0.0/24`
+- [ ] `data-relay-public-subnet` / `10.0.0.0/24`
 - [ ] SSH 22는 관리자 source에 맞게 제한
 - [ ] TCP 443 Public reachability 확인
 - [ ] Published service port는 필요한 범위/source만 허용
@@ -473,8 +473,8 @@ ssh -p <할당된-PUBLIC-SERVICE-PORT> <CLIENT-USER>@<RESERVED-PUBLIC-IP>
 - [ ] Ubuntu 24.04 x86_64 VM Running
 - [ ] Reserved Public IPv4 연결
 - [ ] 외부 SSH 성공
-- [ ] FRP Auto Deploy 2.2.1 / FRP 0.71.0 확인
-- [ ] `frpctl doctor` blocking failure 없음
+- [ ] Data Relay Link 2.2.1 / Data Relay Link 0.71.0 확인
+- [ ] `drlink doctor` blocking failure 없음
 - [ ] 443/6099/7000 listener 노출 구조 정상
 - [ ] reboot 후 상태 유지
 - [ ] 첫 Zero-Touch Client Enrollment 성공
@@ -485,10 +485,10 @@ ssh -p <할당된-PUBLIC-SERVICE-PORT> <CLIENT-USER>@<RESERVED-PUBLIC-IP>
 서비스 연결 실패 시 다음 두 테스트를 분리하면 원인을 빠르게 찾을 수 있습니다.
 
 ```bash
-# 외부 workstation: Internet -> FRP Server
+# 외부 workstation: Internet -> Data Relay Link Server
 nc -vz -w 3 <RESERVED-PUBLIC-IP> <PUBLIC-SERVICE-PORT>
 
-# FRP Client: Client -> Local/LAN Target
+# Data Relay Link Client: Client -> Local/LAN Target
 nc -vz -w 3 <TARGET-IP> <TARGET-PORT>
 ```
 

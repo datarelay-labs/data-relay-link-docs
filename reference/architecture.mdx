@@ -15,30 +15,30 @@ This page is the deeper technical view. For the beginner model, start with [Conc
 flowchart LR
     U[Operator / Internet user]
     F[Public firewall / NAT\noptional]
-    S[FRP Auto Deploy server]
-    C1[Client A\nfrpc + management identity]
-    C2[Client B\nfrpc + management identity]
+    S[Data Relay Link server]
+    C1[Client A\nData Relay Link client runtime + management identity]
+    C2[Client B\nData Relay Link client runtime + management identity]
     L1[Local services\n127.0.0.1:*]
     L2[Reachable LAN services\n10.x / 172.16-31.x / 192.168.x]
 
     U -->|published TCP port| F
     F --> S
-    C1 -->|outbound FRP control| S
-    C2 -->|outbound FRP control| S
+    C1 -->|outbound Data Relay Link control| S
+    C2 -->|outbound Data Relay Link control| S
     C1 --> L1
     C1 --> L2
     C2 --> L1
 ```
 
-The product is intentionally a **small management layer around official FRP**, not a replacement tunnel engine.
+The product intentionally uses a **bundled relay engine behind the Data Relay Link product layer** rather than exposing low-level transport configuration as the operator experience.
 
 ## Control plane vs data plane
 
 | Plane | Purpose | Typical transport |
 | --- | --- | --- |
 | Enrollment / management | bootstrap trust, identity, service metadata, management actions | verified HTTPS |
-| FRP control | register proxies and maintain reverse tunnel control | FRP native TLS or WSS |
-| Published service data | carry SSH/HTTP/HTTPS/custom TCP | TCP through FRP proxy |
+| Relay control | register published services and maintain reverse-tunnel control | native relay TLS or WSS |
+| Published service data | carry SSH/HTTP/HTTPS/custom TCP | TCP through the relay proxy |
 
 These planes use different credentials and should not be treated as interchangeable.
 
@@ -47,9 +47,9 @@ These planes use different credentials and should not be treated as interchangea
 ```mermaid
 flowchart TB
     I[Internet]
-    S[FRP Auto Deploy server]
+    S[Data Relay Link server]
     A[Enrollment / management HTTPS\nTCP 6099]
-    C[FRP control\nTCP 443]
+    C[Data Relay Link control\nTCP 443]
     P[Published services\nTCP 6000-6098]
 
     I --> A
@@ -69,12 +69,12 @@ flowchart TB
     I[Internet]
     FE[Public frontend\nTCP 443]
     A[Allocator backend\n127.0.0.1:6099]
-    F[FRP backend\n127.0.0.1:7000]
+    F[Relay backend\n127.0.0.1:7000]
     P[Published services\nTCP 6000-6098]
 
     I --> FE
     FE -->|HTTPS enrollment paths| A
-    FE -->|FRP control over WSS| F
+    FE -->|Data Relay Link control over WSS| F
     I --> P
 ```
 
@@ -114,17 +114,17 @@ sequenceDiagram
     C->>S: Signed management requests thereafter
 ```
 
-The FRP token authenticates the FRP tunnel. It is **not** the same credential as the Enrollment Code, Bootstrap Ticket, or client management identity.
+The relay token authenticates the relay transport. It is **not** the same credential as the Enrollment Code, Bootstrap Ticket, or client management identity.
 
 ## Persistent server state
 
 Important state includes:
 
 ```text
-/etc/frp-auto-deploy/config.json
-/etc/frp-auto-deploy/pki/
-/etc/frp/server_token
-/var/lib/frp-auto-deploy/registry.json
+/etc/data-relay-link/config.json
+/etc/data-relay-link/pki/
+/etc/data-relay-link/relay_token
+/var/lib/data-relay-link/registry.json
 ```
 
 The design goal is to preserve identity, CA trust, token, registry, and public-port reservations across normal updates, reboots, and supported restore workflows.
@@ -142,4 +142,4 @@ The management layer should fail rather than guess when it encounters conditions
 
 ## Scale boundary
 
-FRP Auto Deploy is optimized for a few systems to a few dozen clients. It does not aim to become a large-fleet orchestrator, CMDB, endpoint compliance platform, or high-availability management cluster.
+Data Relay Link is optimized for a few systems to a few dozen clients. It does not aim to become a large-fleet orchestrator, CMDB, endpoint compliance platform, or high-availability management cluster.
