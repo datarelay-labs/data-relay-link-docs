@@ -10,7 +10,7 @@
     "links": [
       {
         "type": "github",
-        "href": "https://github.com/xdr-labs/frp-auto-deploy"
+        "href": "https://github.com/datarelay-labs/data-relay-link"
       }
     ],
     "primary": {
@@ -25,7 +25,7 @@
   "seo": {
     "indexing": "navigable",
     "metatags": {
-      "canonical": "https://frp.xdr.ooo"
+      "canonical": "https://link.datarelay.run"
     }
   },
   "metadata": {
