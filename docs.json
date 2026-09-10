@@ -65,7 +65,7 @@
             "icon": "network-wired"
           },
           {
-            "group": "frpctl",
+            "group": "drlink",
             "pages": [
               "frpctl/overview",
               "frpctl/cli-reference"
