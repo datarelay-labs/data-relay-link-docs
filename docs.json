@@ -67,8 +67,8 @@
           {
             "group": "drlink",
             "pages": [
-              "frpctl/overview",
-              "frpctl/cli-reference"
+              "drlink/overview",
+              "drlink/cli-reference"
             ],
             "icon": "terminal"
           },

@@ -5,7 +5,7 @@ description: "Understand disable, revoke, release, uninstall, purge, and update 
 
 # Lifecycle Semantics
 
-FRP Auto Deploy deliberately separates **temporary publication**, **management identity**, and **public-port reservation**. These are different state machines.
+Data Relay Link deliberately separates **temporary publication**, **management identity**, and **public-port reservation**. These are different state machines.
 
 ```text
 disable   != release
@@ -68,7 +68,7 @@ stateDiagram-v2
 `show enrollments` does not expose the secret itself. Stable v2.2.1 supports revoking active enrollment credentials with:
 
 ```bash
-sudo frpctl revoke enrollment <ID>
+sudo drlink revoke enrollment <ID>
 ```
 
 <Note>

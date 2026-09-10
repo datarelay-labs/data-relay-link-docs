@@ -1,11 +1,11 @@
 ---
 title: "Backup & Restore"
-description: "Protect FRP Auto Deploy identity, PKI, registry, and configuration before disaster recovery or major maintenance."
+description: "Protect Data Relay Link identity, PKI, registry, and configuration before disaster recovery or major maintenance."
 ---
 
 # Backup & Restore
 
-The FRP Auto Deploy server contains state that is more important than the software binaries themselves. Backups protect the trust and reservation data needed to keep existing clients working after recovery.
+The Data Relay Link server contains state that is more important than the software binaries themselves. Backups protect the trust and reservation data needed to keep existing clients working after recovery.
 
 ## What you are protecting
 
@@ -14,7 +14,7 @@ flowchart TB
     B[Server backup]
     B --> C[Configuration]
     B --> P[Project PKI / CA]
-    B --> T[FRP token]
+    B --> T[Data Relay Link token]
     B --> R[Client registry]
     B --> E[Enrollment state where applicable]
 
@@ -26,7 +26,7 @@ flowchart TB
 ## Create a backup
 
 ```bash
-sudo frpctl create backup
+sudo drlink create backup
 ```
 
 Store the resulting backup as sensitive infrastructure material.
@@ -36,10 +36,10 @@ Store the resulting backup as sensitive infrastructure material.
 At minimum, understand these locations:
 
 ```text
-/etc/frp-auto-deploy/config.json
-/etc/frp-auto-deploy/pki/
-/etc/frp/server_token
-/var/lib/frp-auto-deploy/registry.json
+/etc/data-relay-link/config.json
+/etc/data-relay-link/pki/
+/etc/data-relay-link/relay_token
+/var/lib/data-relay-link/registry.json
 ```
 
 The supported backup format also handles related state according to the installed release.
@@ -47,7 +47,7 @@ The supported backup format also handles related state according to the installe
 ## Restore
 
 ```bash
-sudo frpctl restore backup <path>
+sudo drlink restore backup <path>
 ```
 
 Restore is not a blind `cp -r`. The supported flow is designed around validation and rollback behavior.
@@ -77,10 +77,10 @@ Existing clients trust the project's private CA. Losing the CA private key can f
 ## After restore
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show clients
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show clients
+sudo drlink doctor
 ```
 
 Then verify one or more representative public service paths.
@@ -95,7 +95,7 @@ flowchart LR
 ## What not to do
 
 - do not treat the PKI directory as disposable configuration
-- do not restore only `frps.toml` and expect identity/port state to follow
+- do not restore only `relay-server.toml` and expect identity/port state to follow
 - do not copy registry fragments manually between unrelated servers
 - do not store backups in a public location
 

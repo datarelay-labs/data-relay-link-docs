@@ -12,19 +12,19 @@ Linux/systemd remains the product's server and Linux-client foundation. In stabl
 Before enrollment, confirm:
 
 - `sudo`/root access is available for installation
-- the client can make outbound connections to the FRP server public endpoints
+- the client can make outbound connections to the Data Relay Link server public endpoints
 - any service you want to publish already exists and is reachable from the client
 - for SSH, the SSH user already exists and `sshd` is running
 
-FRP Auto Deploy does not create operating-system users, passwords, SSH keys, or application services.
+Data Relay Link does not create operating-system users, passwords, SSH keys, or application services.
 
 ## Client lifecycle at a glance
 
 The original field guide used the following lifecycle diagram to show where enrollment, service configuration, normal operation, updates, and removal fit together.
 
-![FRP Auto Deploy client lifecycle](/images/guides/50.png)
+![Data Relay Link client lifecycle](/images/guides/50.png)
 
-The current v2.2.1 rule is the same at a high level: enroll once, keep the persistent CLIENT ID, change services through `frpctl`, update without re-enrollment, and use the explicit lifecycle operations when retiring a client or releasing ports.
+The current v2.2.1 rule is the same at a high level: enroll once, keep the persistent CLIENT ID, change services through `drlink`, update without re-enrollment, and use the explicit lifecycle operations when retiring a client or releasing ports.
 
 ## Choose enrollment method
 
@@ -48,7 +48,7 @@ flowchart TD
 For the easiest interactive server workflow:
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 Then:
@@ -60,7 +60,7 @@ create zero-touch
 For an explicit SSH profile:
 
 ```bash
-sudo frpctl create enrollment \
+sudo drlink create enrollment \
   --one-line \
   --ssh \
   --ssh-user <ssh-user> \
@@ -74,7 +74,7 @@ Replace `<ssh-user>` with an SSH account that already exists on the target machi
 On the server:
 
 ```bash
-sudo frpctl create enrollment
+sudo drlink create enrollment
 ```
 
 Run the generated client bootstrap command and enter the short-lived Enrollment Code when prompted. The installer can then guide the remote operator through service selection.
@@ -84,32 +84,32 @@ Run the generated client bootstrap command and enter the short-lived Enrollment 
 ```mermaid
 sequenceDiagram
     participant C as Linux client
-    participant S as FRP Auto Deploy server
+    participant S as Data Relay Link server
 
     C->>S: bootstrap credential over HTTPS
     C->>C: verify server trust / CA path
     C->>S: enrollment
     S-->>C: CLIENT identity + service config
-    C->>S: start outbound FRP control tunnel
+    C->>S: start outbound Data Relay Link control tunnel
 ```
 
 ## Verify on the client
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl show info
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink show info
+sudo drlink doctor
 ```
 
 ## Verify on the server
 
 ```bash
-sudo frpctl show clients
-sudo frpctl show enrollments
-sudo frpctl show client <CLIENT-ID>
-sudo frpctl show client <CLIENT-ID> services
+sudo drlink show clients
+sudo drlink show enrollments
+sudo drlink show client <CLIENT-ID>
+sudo drlink show client <CLIENT-ID> services
 ```
 
 The client receives a persistent CLIENT ID. Normal reboots, supported service edits, and normal stable project updates do not require a new enrollment.

@@ -1,6 +1,6 @@
 ---
 title: "CLI Reference"
-description: "Canonical frpctl command grammar and everyday operator commands."
+description: "Canonical drlink command grammar and everyday operator commands."
 ---
 
 # CLI Reference
@@ -24,7 +24,7 @@ Enter execute
 ↑/↓   session-only history
 ```
 
-Tab does not execute commands. `frpctl` history is not written to disk.
+Tab does not execute commands. `drlink` history is not written to disk.
 
 ## Client selector
 
@@ -135,10 +135,10 @@ These are never aliases. There is intentionally no ambiguous `delete client` com
 
 ```text
 update project [--check]
-update frp [--check]
+update relay-engine [--check]
 ```
 
-FRP remains pinned to the tested project version. `show upstream` is informational.
+The bundled relay engine remains pinned to the tested project version. `show upstream` is informational.
 
 ## Other
 
@@ -190,7 +190,7 @@ Secrets are never printed by `show`, Tab, or help output.
 | `release-service` | `release service` |
 | `release-client` | `release client` |
 | `project-update` / `client-update` | `update project` |
-| `frp-update` / `server-update` | `update frp` |
+| `relay-engine-update` / `server-update` | `update relay-engine` |
 | `backup` | `create backup` |
 | `restore PATH` | `restore backup PATH` |
 | `upstream` | `show upstream` |

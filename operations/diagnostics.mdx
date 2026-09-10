@@ -1,6 +1,6 @@
 ---
 title: "Diagnostics"
-description: "Use frpctl status and doctor to diagnose server, client, PKI, registry, and network problems safely."
+description: "Use drlink status and doctor to diagnose server, client, PKI, registry, and network problems safely."
 ---
 
 # Diagnostics
@@ -22,21 +22,21 @@ flowchart LR
 ## Server baseline
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show clients
-sudo frpctl show enrollments
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show clients
+sudo drlink show enrollments
+sudo drlink doctor
 ```
 
 ## Client baseline
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl show info
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink show info
+sudo drlink doctor
 ```
 
 ## What `doctor` can surface
@@ -47,7 +47,7 @@ sudo frpctl doctor
 | Permissions | secret-file modes and ownership |
 | PKI / trust | CA material and consistency |
 | Runtime | systemd service state |
-| FRP | generated config, transport, local consistency |
+| Data Relay Link | generated config, transport, local consistency |
 | Enrollment | allocator/HTTPS reachability and trust path |
 | State | registry/client-state consistency |
 | Topology | Direct/single-443 and common network mismatch |
@@ -59,7 +59,7 @@ sudo frpctl doctor
 ```mermaid
 flowchart TD
     A[Service unreachable] --> B{Client/service state healthy?}
-    B -->|No| C[Product state / FRP config / identity]
+    B -->|No| C[Product state / Data Relay Link config / identity]
     B -->|Yes| D{Public service port reachable?}
     D -->|No| E[Cloud firewall / NAT / external firewall]
     D -->|Yes| F{Client can reach target?}
@@ -67,7 +67,7 @@ flowchart TD
     F -->|Yes| H[Protocol-specific investigation]
 ```
 
-FRP Auto Deploy does not automatically control external security groups, NAT, DNS, or the target application's own listener/authentication.
+Data Relay Link does not automatically control external security groups, NAT, DNS, or the target application's own listener/authentication.
 
 ## Useful target checks
 
@@ -77,17 +77,17 @@ For a local SSH target:
 ss -lntp | grep ':22'
 ```
 
-For a LAN target, prove the client itself can reach `target-host:target-port` before debugging the FRP public path.
+For a LAN target, prove the client itself can reach `target-host:target-port` before debugging the Data Relay Link public path.
 
 ## Avoid destructive diagnosis
 
 Do not start by editing or replacing:
 
 ```text
-/etc/frp/frps.toml
-/etc/frp/frpc.toml
-/var/lib/frp-auto-deploy/registry.json
-/etc/frp/client-state.json
+/etc/data-relay-link/relay-server.toml
+/etc/data-relay-link/relay-client.toml
+/var/lib/data-relay-link/registry.json
+/etc/data-relay-link/client-state.json
 client management identity files
 project PKI
 ```

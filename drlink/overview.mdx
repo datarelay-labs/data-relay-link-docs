@@ -1,16 +1,16 @@
 ---
-title: "frpctl Guide"
-description: "Use the primary operator CLI for clients, services, enrollment, diagnostics, and lifecycle operations."
+title: "drlink Guide"
+description: "Use the primary Data Relay Link operator CLI for clients, services, enrollment, diagnostics, and lifecycle operations."
 ---
 
-# frpctl Guide
+# drlink Guide
 
-`frpctl` is the everyday operator interface. You can use it interactively or run a full command directly from the shell.
+`drlink` is the everyday operator interface. You can use it interactively or run a full command directly from the shell.
 
 ## Start here if you are new
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 The interactive CLI provides completion and context help:
@@ -97,7 +97,7 @@ release client <ID>
 
 update project --check
 update project
-update frp --check
+update relay-engine --check
 doctor
 ```
 
@@ -143,11 +143,11 @@ revoke  != release
 
 This documentation's operational baseline is stable **v2.2.1**. The mutable `main` branch may contain later development or docs-only changes; normal field operation should follow the immutable v2.2.1 release contract.
 
-For exact stable syntax, use the [CLI Reference](/frpctl/cli-reference).
+For exact stable syntax, use the [CLI Reference](/drlink/cli-reference).
 
 ## Safety behavior
 
 - `doctor` is read-only.
-- `history` is session-only and is not persisted by `frpctl`.
-- FRP stays pinned to the project-tested version; `show upstream` is informational.
+- `history` is session-only and is not persisted by `drlink`.
+- The bundled relay engine stays pinned to the project-tested version; `show upstream` is informational.
 - Ambiguous identity selection should fail rather than guess.

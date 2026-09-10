@@ -25,7 +25,7 @@ flowchart TD
   </Card>
 
   <Card title="Updates" icon="arrows-rotate" href="/operations/updates">
-    Update the project or pinned FRP without intentionally losing identity, CA, token, or ports.
+    Update the project or bundled relay engine without intentionally losing identity, CA, token, or ports.
   </Card>
 
   <Card title="Backup & Restore" icon="box-archive" href="/operations/backup-restore">
@@ -58,13 +58,13 @@ flowchart LR
     C --> V[Verify status + doctor + service path]
 ```
 
-## State FRP Auto Deploy tries to preserve
+## State Data Relay Link tries to preserve
 
 Normal supported updates and reboots are designed to preserve:
 
 - CLIENT ID and management identity
 - project private CA
-- FRP token
+- Data Relay Link token
 - server registry
 - service definitions
 - persistent public-port reservations
@@ -74,14 +74,14 @@ Normal supported updates and reboots are designed to preserve:
 Do not begin troubleshooting by manually editing:
 
 ```text
-/etc/frp/frps.toml
-/etc/frp/frpc.toml
-/var/lib/frp-auto-deploy/registry.json
-/etc/frp/client-state.json
+/etc/data-relay-link/relay-server.toml
+/etc/data-relay-link/relay-client.toml
+/var/lib/data-relay-link/registry.json
+/etc/data-relay-link/client-state.json
 management identity / PKI files
 ```
 
-Use `frpctl doctor` first and follow the documented lifecycle command for the actual intent.
+Use `drlink doctor` first and follow the documented lifecycle command for the actual intent.
 
 <Tip>
   If you are unsure whether you mean **disable**, **revoke**, or **release**, read [Lifecycle Semantics](/operations/lifecycle) before executing the command.
