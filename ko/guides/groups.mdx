@@ -6,7 +6,7 @@ description: "CLIENT ID나 서비스 포트를 바꾸지 않고 소규모 Client
 
 # 수동 그룹
 
-FRP Auto Deploy v2.2.1에는 Client를 정리하기 위한 **Manual Group MVP**가 포함되어 있습니다. Group은 관리자용 metadata이며 CLIENT ID, 서비스 설정, public port, tunnel 동작을 변경하지 않습니다.
+Data Relay Link v2.2.1에는 Client를 정리하기 위한 **Manual Group MVP**가 포함되어 있습니다. Group은 관리자용 metadata이며 CLIENT ID, 서비스 설정, public port, tunnel 동작을 변경하지 않습니다.
 
 <Note>
   v2.2.1은 **수동 그룹만 지원**합니다. Dynamic membership rule이나 대규모 fleet orchestration은 현재 stable 범위가 아닙니다.
@@ -15,7 +15,7 @@ FRP Auto Deploy v2.2.1에는 Client를 정리하기 위한 **Manual Group MVP**�
 ## 그룹 생성
 
 ```bash
-sudo frpctl create group branch-office --description "Branch office systems"
+sudo drlink create group branch-office --description "Branch office systems"
 ```
 
 저장된 Group에는 `grp_1234abcd` 같은 immutable Group ID가 있습니다. 이름과 설명은 나중에 변경할 수 있습니다.
@@ -25,7 +25,7 @@ sudo frpctl create group branch-office --description "Branch office systems"
 가능하면 canonical CLIENT ID를 사용하세요.
 
 ```bash
-sudo frpctl add client <CLIENT-ID> group branch-office
+sudo drlink add client <CLIENT-ID> group branch-office
 ```
 
 한 Client는 여러 Group에 속할 수 있습니다.
@@ -33,10 +33,10 @@ sudo frpctl add client <CLIENT-ID> group branch-office
 ## Group과 membership 확인
 
 ```bash
-sudo frpctl show groups
-sudo frpctl show group branch-office
-sudo frpctl show clients --group branch-office
-sudo frpctl show client <CLIENT-ID> groups
+sudo drlink show groups
+sudo drlink show group branch-office
+sudo drlink show clients --group branch-office
+sudo drlink show client <CLIENT-ID> groups
 ```
 
 `all`과 `ungrouped`는 virtual selector이며 실제 저장되는 Group object가 아닙니다.
@@ -44,8 +44,8 @@ sudo frpctl show client <CLIENT-ID> groups
 ## Group 이름/설명 변경
 
 ```bash
-sudo frpctl rename group branch-office seoul-office
-sudo frpctl set group seoul-office description "Seoul branch systems"
+sudo drlink rename group branch-office seoul-office
+sudo drlink set group seoul-office description "Seoul branch systems"
 ```
 
 Group 이름을 바꿔도 immutable Group ID는 바뀌지 않습니다.
@@ -53,7 +53,7 @@ Group 이름을 바꿔도 immutable Group ID는 바뀌지 않습니다.
 ## Membership 제거
 
 ```bash
-sudo frpctl remove client <CLIENT-ID> group seoul-office
+sudo drlink remove client <CLIENT-ID> group seoul-office
 ```
 
 Membership 관계만 제거됩니다. Client enrollment, 서비스, public-port reservation은 그대로 유지됩니다.
@@ -61,7 +61,7 @@ Membership 관계만 제거됩니다. Client enrollment, 서비스, public-port 
 ## Group 삭제
 
 ```bash
-sudo frpctl delete group seoul-office
+sudo drlink delete group seoul-office
 ```
 
 Group 삭제는 membership reference만 제거하며 Client 삭제, identity revoke, 서비스 disable, port release를 수행하지 않습니다.

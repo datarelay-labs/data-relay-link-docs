@@ -10,19 +10,19 @@ Linux/systemd는 Server와 Linux Client의 기반입니다. Stable v2.2.1에서�
 ## 등록 전 확인
 
 - `sudo`/root 권한이 있음
-- 클라이언트에서 FRP 서버 public endpoint로 outbound 연결 가능
+- 클라이언트에서 Data Relay Link 서버 public endpoint로 outbound 연결 가능
 - 게시할 target 서비스가 실제로 실행 중이거나 클라이언트에서 접근 가능
 - SSH를 게시한다면 SSH 계정과 `sshd`가 이미 준비됨
 
-FRP Auto Deploy는 OS user/password/SSH key/application service를 자동 생성하지 않습니다.
+Data Relay Link는 OS user/password/SSH key/application service를 자동 생성하지 않습니다.
 
 ## Client lifecycle 한눈에 보기
 
 기존 실사용 가이드의 lifecycle 그림은 Enrollment, 서비스 구성, 정상 운영, 업데이트와 제거의 관계를 빠르게 이해하는 데 유용합니다.
 
-![FRP Auto Deploy Client 관리 lifecycle](/images/guides/client-lifecycle.webp)
+![Data Relay Link Client 관리 lifecycle](/images/guides/client-lifecycle.webp)
 
-현재 v2.2.1에서도 큰 원칙은 같습니다. 한 번 등록한 CLIENT ID를 유지하고, 서비스 변경은 `frpctl`로 처리하며, 정상 업데이트 때문에 재등록하지 않습니다. 장비를 폐기하거나 public port를 반환할 때만 명시적인 lifecycle 작업을 사용합니다.
+현재 v2.2.1에서도 큰 원칙은 같습니다. 한 번 등록한 CLIENT ID를 유지하고, 서비스 변경은 `drlink`로 처리하며, 정상 업데이트 때문에 재등록하지 않습니다. 장비를 폐기하거나 public port를 반환할 때만 명시적인 lifecycle 작업을 사용합니다.
 
 ## 등록 방식을 선택하세요
 
@@ -46,7 +46,7 @@ flowchart TD
 가장 쉬운 CLI 방식:
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 ```text
@@ -56,7 +56,7 @@ create zero-touch
 SSH 프로필을 명시하려면:
 
 ```bash
-sudo frpctl create enrollment \
+sudo drlink create enrollment \
   --one-line \
   --ssh \
   --ssh-user <ssh-user> \
@@ -70,7 +70,7 @@ sudo frpctl create enrollment \
 서버에서:
 
 ```bash
-sudo frpctl create enrollment
+sudo drlink create enrollment
 ```
 
 생성된 bootstrap 명령을 client에서 실행하고 프롬프트에 단기 Enrollment Code를 입력합니다.
@@ -80,32 +80,32 @@ sudo frpctl create enrollment
 ```mermaid
 sequenceDiagram
     participant C as Linux Client
-    participant S as FRP Auto Deploy Server
+    participant S as Data Relay Link Server
 
     C->>S: Bootstrap credential over HTTPS
     C->>C: Server trust / CA 검증
     C->>S: Enrollment
     S-->>C: CLIENT identity + service config
-    C->>S: Outbound FRP control tunnel
+    C->>S: Outbound Data Relay Link control tunnel
 ```
 
 ## Client에서 확인
 
 ```bash
-sudo frpctl show version
-sudo frpctl show status
-sudo frpctl show services
-sudo frpctl show info
-sudo frpctl doctor
+sudo drlink show version
+sudo drlink show status
+sudo drlink show services
+sudo drlink show info
+sudo drlink doctor
 ```
 
 ## Server에서 확인
 
 ```bash
-sudo frpctl show clients
-sudo frpctl show enrollments
-sudo frpctl show client <CLIENT-ID>
-sudo frpctl show client <CLIENT-ID> services
+sudo drlink show clients
+sudo drlink show enrollments
+sudo drlink show client <CLIENT-ID>
+sudo drlink show client <CLIENT-ID> services
 ```
 
 정상 등록 후에는 일반 재부팅, 지원되는 service edit, 정상 project update 때문에 다시 enrollment할 필요가 없습니다.

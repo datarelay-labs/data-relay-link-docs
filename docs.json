@@ -140,10 +140,10 @@
             "icon": "network-wired"
           },
           {
-            "group": "frpctl",
+            "group": "drlink",
             "pages": [
-              "ko/frpctl/overview",
-              "ko/frpctl/cli-reference"
+              "ko/drlink/overview",
+              "ko/drlink/cli-reference"
             ],
             "icon": "terminal"
           },

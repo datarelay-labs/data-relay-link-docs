@@ -1,13 +1,13 @@
 ---
 title: "릴리스 상태"
 sidebarTitle: "릴리스 상태"
-description: "현재 stable v2.2.1, pinned FRP v0.71.0, immutable stable tag와 development main의 차이를 설명합니다."
+description: "현재 stable v2.2.1, bundled relay engine v0.71.0, immutable stable tag와 development main의 차이를 설명합니다."
 icon: "tag"
 ---
 
 # 릴리스 상태
 
-FRP Auto Deploy는 **published stable release**와 변경 가능한 development `main` branch를 구분합니다.
+Data Relay Link는 **published stable release**와 변경 가능한 development `main` branch를 구분합니다.
 
 ## 현재 Stable
 
@@ -15,7 +15,7 @@ FRP Auto Deploy는 **published stable release**와 변경 가능한 development 
 | --- | --- |
 | Published stable release | **v2.2.1** |
 | Project version | **2.2.1** |
-| Pinned / tested FRP | **v0.71.0** |
+| Bundled relay engine | **v0.71.0** |
 | Field install 기준 | immutable `v2.2.1` tag |
 | Release commit | `19d4b6fb8a9bee2d477ace6f5c3ed70310e7ea8f` |
 | Release qualification | **동일한 qualified candidate에서 전체 Real E2E 두 번 완료** |
@@ -42,11 +42,11 @@ curl -fsSL \
 
 Stable server에서 생성하는 client enrollment 명령도 같은 stable release 경로를 유지하는 것이 원칙입니다.
 
-## FRP 버전 정책
+## Data Relay Link 버전 정책
 
-FRP Auto Deploy는 upstream 최신 FRP를 자동으로 따라가지 않습니다. Project에서 특정 upstream 버전을 pin하고 검증한 뒤 qualified project release에 포함합니다.
+Data Relay Link는 upstream 최신 Data Relay Link를 자동으로 따라가지 않습니다. Project에서 특정 upstream 버전을 pin하고 검증한 뒤 qualified project release에 포함합니다.
 
-현재 pinned FRP:
+현재 pinned relay engine:
 
 ```text
 0.71.0

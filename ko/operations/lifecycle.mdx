@@ -7,7 +7,7 @@ icon: "diagram-project"
 
 # Lifecycle 의미
 
-FRP Auto Deploy는 **서비스 게시 상태**, **management identity**, **public-port reservation**을 서로 다른 상태로 관리합니다.
+Data Relay Link는 **서비스 게시 상태**, **management identity**, **public-port reservation**을 서로 다른 상태로 관리합니다.
 
 ```text
 disable   != release
@@ -69,7 +69,7 @@ flowchart TD
 Active enrollment credential은 다음처럼 revoke할 수 있습니다.
 
 ```bash
-sudo frpctl revoke enrollment <ID>
+sudo drlink revoke enrollment <ID>
 ```
 
 <Note>

@@ -1,14 +1,14 @@
 ---
-title: "frpctl 사용법"
-description: "FRP Auto Deploy의 기본 운영 CLI 사용법"
+title: "drlink 사용법"
+description: "Data Relay Link의 기본 운영 CLI 사용법"
 ---
 
-# frpctl 사용법
+# drlink 사용법
 
 일상 운영에서는 다음 하나만 기억하면 됩니다.
 
 ```bash
-sudo frpctl
+sudo drlink
 ```
 
 ## 처음 사용하는 사람을 위한 기본 키
@@ -127,11 +127,11 @@ revoke  != release
 
 이 사이트의 운영 baseline은 **stable v2.2.1**입니다. Mutable `main`에는 이후 개발 또는 docs-only 변경이 있을 수 있으므로 field 운영은 immutable v2.2.1 contract를 기준으로 합니다.
 
-Stable 서버에서는 현재 설치된 `frpctl help`와 immutable release 문서를 기준으로 하세요.
+Stable 서버에서는 현재 설치된 `drlink help`와 immutable release 문서를 기준으로 하세요.
 
 ## 안전성
 
 - `doctor`는 read-only
-- `frpctl` history는 session-only
-- `show upstream`은 정보용이며 최신 FRP를 자동 설치하지 않음
+- `drlink` history는 session-only
+- `show upstream`은 정보용이며 최신 relay engine을 자동 설치하지 않음
 - Identity가 ambiguous하면 fail closed
