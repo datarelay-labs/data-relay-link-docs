@@ -89,7 +89,8 @@
               "operations/backup-restore",
               "operations/diagnostics",
               "operations/lifecycle",
-              "troubleshooting/overview"
+              "troubleshooting/overview",
+              "feedback/index"
             ],
             "icon": "screwdriver-wrench"
           },
@@ -164,7 +165,8 @@
               "ko/operations/backup-restore",
               "ko/operations/lifecycle",
               "ko/operations/updates",
-              "ko/operations/troubleshooting"
+              "ko/operations/troubleshooting",
+              "ko/feedback/index"
             ],
             "icon": "screwdriver-wrench"
           },
