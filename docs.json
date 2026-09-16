@@ -104,7 +104,8 @@
               "reference/network-ports",
               "reference/release-status",
               "reference/glossary",
-              "reference/limitations"
+              "reference/limitations",
+              "reference/license"
             ],
             "icon": "shield-halved"
           }
@@ -179,7 +180,8 @@
               "ko/security/overview",
               "ko/reference/network-ports",
               "ko/reference/release-status",
-              "ko/reference/glossary"
+              "ko/reference/glossary",
+              "ko/reference/license"
             ],
             "icon": "shield-halved"
           }
